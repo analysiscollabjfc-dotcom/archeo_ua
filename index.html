@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archeo UA</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <aside id="panel">
+    <header class="brand">
+      <div class="logo" aria-hidden="true">AR</div>
+      <div>
+        <h1>Archeo UA</h1>
+        <p>Archaeological landscape &amp; site-potential explorer</p>
+      </div>
+      <button id="panelToggle" class="icon-btn" title="Hide panel" aria-label="Hide panel">⟨</button>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="periods">Periods</button>
+      <button class="tab" data-tab="layers">Layers</button>
+      <button class="tab" data-tab="sites">Sites</button>
+      <button class="tab" data-tab="maps">Old maps</button>
+      <button class="tab" data-tab="survey">Survey</button>
+      <button class="tab" data-tab="dba">Assessment</button>
+      <button class="tab" data-tab="inspect">Inspect</button>
+      <button class="tab" data-tab="log">Field log</button>
+      <button class="tab" data-tab="guide">Guide</button>
+    </nav>
+
+    <!-- PERIODS -->
+    <section class="pane active" id="pane-periods">
+      <h2>Time filter</h2>
+      <div class="range2">
+        <div class="track"></div><div class="fill" id="rangeFill"></div>
+        <input type="range" id="pFrom" min="0" max="14" step="1" value="0" aria-label="From period">
+        <input type="range" id="pTo" min="0" max="14" step="1" value="14" aria-label="To period">
+      </div>
+      <div class="range-label" id="rangeLabel"></div>
+      <h2>Periods <span class="pill" id="pCount"></span></h2>
+      <div class="row">
+        <button class="btn" id="pAll">All</button>
+        <button class="btn" id="pNone">None</button>
+        <label class="chk" style="margin-left:auto"><input type="checkbox" id="pUndated" checked> Undated sites</label>
+      </div>
+      <div id="periodList" class="period-list"></div>
+      <p class="hint">Every checked period is shown at the same time. A multi-period site is shown if any of its periods is visible, coloured by its earliest visible period.</p>
+    </section>
+
+    <!-- LAYERS -->
+    <section class="pane" id="pane-layers">
+      <h2>Map layers</h2>
+      <div id="layerList" class="layer-list"></div>
+      <label class="slider">Potential / landform opacity <output id="opOut">0.6</output>
+        <input type="range" id="op" min="0" max="1" step="0.05" value="0.6">
+      </label>
+      <div class="legend">
+        <div class="legend-title">Site potential (relative, rule-based)</div>
+        <div class="ramp" id="potRamp"></div>
+        <div class="ramp-labels"><span>low</span><span>moderate</span><span>high</span></div>
+      </div>
+      <div class="legend-title" style="margin-top:12px">Landforms</div>
+      <div class="lf-legend" id="lfLegend"></div>
+      <h2>Online site sources</h2>
+      <p class="hint">Needs internet. Loads sites in the current view (zoom ≥ 9 for OSM) and adds them as undated or dated sites.</p>
+      <div class="row">
+        <button class="btn primary" id="osmLoad">OSM archaeological sites</button>
+        <button class="btn" id="wdLoad">Wikidata (all Ukraine)</button>
+      </div>
+      <p id="srcStatus" class="status"></p>
+    </section>
+
+    <!-- SITES -->
+    <section class="pane" id="pane-sites">
+      <h2>Sites <span class="pill" id="sCount"></span></h2>
+      <div class="filters">
+        <input type="search" id="sSearch" placeholder="Search name, type, notes…">
+        <select id="sSource"><option value="">All sources</option></select>
+        <select id="sType"><option value="">All types</option></select>
+      </div>
+      <div class="row">
+        <label class="btn file">Import CSV / GeoJSON<input type="file" id="sImport" accept=".csv,.geojson,.json" hidden></label>
+        <button class="btn" id="sExport">Export visible</button>
+        <button class="btn" id="sClearImp">Remove imported</button>
+      </div>
+      <p class="hint">CSV columns: <code>name, lat, lon, period, type, notes, depth</code>. <code>period</code> can be a period id (e.g. <code>eneo</code>), a name, or years like <code>-3800..-3400</code>. A numeric <code>depth</code> (m, top of cultural layer) also calibrates the depth model.</p>
+      <ul id="siteList" class="cards"></ul>
+    </section>
+
+    <!-- OLD MAPS -->
+    <section class="pane" id="pane-maps">
+      <h2>Historical map layers</h2>
+      <div id="histList" class="cards"></div>
+      <div class="row"><button class="btn" id="swipeBtn">Compare (swipe)</button></div>
+      <h3>Add online map</h3>
+      <div class="filters">
+        <input type="text" id="hName" placeholder="Name, e.g. Schubert 3-verst (1860s)">
+        <input type="text" id="hUrl" placeholder="Tile URL with {z}/{x}/{y}, or WMS base URL">
+        <input type="text" id="hLayers" placeholder="WMS layers (leave empty for XYZ tiles)">
+        <input type="number" id="hYear" placeholder="Map year (e.g. 1868)">
+      </div>
+      <div class="row"><button class="btn primary" id="hAdd">Add map layer</button></div>
+      <p class="hint">Paste a tile or WMS address from a historical map service you have access to (for example Mapire / Arcanum Habsburg surveys, national library or archive map servers). Check each service's terms of use.</p>
+      <h3>Georeference a scan</h3>
+      <div class="row">
+        <label class="btn file primary">Open scan (JPG/PNG)<input type="file" id="scanFile" accept="image/*" hidden></label>
+      </div>
+      <p class="hint">Click a point on the scan, then the same point on the map (a church, road junction or river bend). Add at least 3 pairs, spread around the sheet; more is better. The fit is affine, which is fine for one map sheet.</p>
+      <h3>Digitise features from maps</h3>
+      <div class="row"><button class="btn" id="digBtn">Digitise feature</button></div>
+      <p class="hint">Click the map to record a feature you see on an old map (barrow symbol, vanished village, mill, church, earthwork). It becomes a site with the map's year.</p>
+    </section>
+
+    <!-- SURVEY -->
+    <section class="pane" id="pane-survey">
+      <h2>Survey planning</h2>
+      <div class="filters">
+        <select id="svType">
+          <option value="1">Settlements</option>
+          <option value="0">Barrows</option>
+          <option value="2">Hillforts</option>
+        </select>
+      </div>
+      <label class="slider">Minimum potential <output id="svMinOut">0.60</output>
+        <input type="range" id="svMin" min="0.2" max="0.95" step="0.05" value="0.6">
+      </label>
+      <label class="slider">Spacing between candidates <output id="svSpOut">1.0 km</output>
+        <input type="range" id="svSp" min="0.2" max="10" step="0.1" value="1">
+      </label>
+      <label class="chk"><input type="checkbox" id="svNovel" checked> Exclude candidates within 500 m of known sites</label>
+      <div class="row"><button class="btn primary" id="svRun">Rank candidates in view</button></div>
+      <div class="row">
+        <button class="btn" data-svexport="gpx">GPX</button>
+        <button class="btn" data-svexport="geojson">GeoJSON</button>
+        <button class="btn" data-svexport="csv">CSV</button>
+      </div>
+      <p id="svStatus" class="status"></p>
+      <ol id="svList" class="cards"></ol>
+    </section>
+
+    <!-- DESK-BASED ASSESSMENT -->
+    <section class="pane" id="pane-dba">
+      <h2>Desk-based assessment</h2>
+      <p class="hint">Draw the project area: click to add vertices, double-click to finish. The report lists known sites within the buffer, predicted potential, landforms and expected depths.</p>
+      <label class="slider">Search buffer <output id="dbBufOut">1.0 km</output>
+        <input type="range" id="dbBuf" min="0" max="10" step="0.5" value="1">
+      </label>
+      <div class="row">
+        <button class="btn primary" id="dbDraw">Draw area</button>
+        <button class="btn" id="dbClear">Clear</button>
+        <button class="btn" id="dbReport">Open report</button>
+      </div>
+      <div id="dbOut"></div>
+    </section>
+
+    <!-- INSPECT -->
+    <section class="pane" id="pane-inspect">
+      <h2>Point inspector</h2>
+      <p class="hint">Click anywhere on the map: terrain, site potential, expected depth per period, and nearby sites.</p>
+      <div id="inspectOut"></div>
+    </section>
+
+    <!-- FIELD LOG -->
+    <section class="pane" id="pane-log">
+      <h2>Field log</h2>
+      <p class="hint">Record finds and depth observations (stored only in this browser). Observations with a depth and period calibrate the depth model within ~20 km.</p>
+      <div class="row">
+        <button id="logAdd" class="btn primary">Add record</button>
+        <button id="logExport" class="btn">Export GeoJSON</button>
+        <button id="logCsv" class="btn">Export CSV</button>
+        <label class="btn file">Import<input type="file" id="logImport" accept=".geojson,.json" hidden></label>
+      </div>
+      <ul id="logList" class="cards"></ul>
+    </section>
+
+    <!-- GUIDE -->
+    <section class="pane" id="pane-guide"></section>
+
+    <footer class="foot">
+      Model outputs are relative, rule-based estimates, not surveys. Keep predicted and unpublished locations confidential.
+      <a href="#" data-goto="guide-limits">Limitations</a>
+    </footer>
+  </aside>
+
+  <main id="map" aria-label="Map"></main>
+  <button id="panelShow" class="icon-btn floating" title="Show panel" aria-label="Show panel">☰</button>
+  <div id="coords" class="coords"></div>
+
+  <div class="georef" id="georef">
+    <header><b id="grTitle">Georeference</b><button class="btn" id="grCancel">Close</button></header>
+    <div class="view" id="grView"></div>
+    <footer>
+      <span id="grStatus">Click a point on the scan.</span>
+      <span style="flex:1"></span>
+      <input type="text" id="grName" placeholder="Map name" style="width:140px">
+      <input type="number" id="grYear" placeholder="Year" style="width:80px">
+      <button class="btn" id="grUndo">Undo</button>
+      <button class="btn primary" id="grSave">Save</button>
+    </footer>
+  </div>
+
+  <div id="loading" class="coords" style="left:50%;right:auto;bottom:auto;top:12px;transform:translateX(-50%)">Loading terrain rasters…</div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="data/base.js"></script>
+  <script src="data/periods.js"></script>
+  <script src="data/zones.js"></script>
+  <script src="data/sites.js"></script>
+  <script src="data/raster_ukraine.js"></script>
+  <script src="data/raster_talne_30m.js"></script>
+  <script src="data/streams_ukraine.js"></script>
+  <script src="data/streams_talne_30m.js"></script>
+  <script src="js/depth.js"></script>
+  <script src="js/rasters.js"></script>
+  <script src="js/histmaps.js"></script>
+  <script src="js/guide.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
