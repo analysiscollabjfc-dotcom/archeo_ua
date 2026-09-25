@@ -2,43 +2,43 @@
  "method": "thin-plate spline (exact)",
  "bounds": [
   [
-   43.743979,
-   25.269938
+   43.741491,
+   25.277441
   ],
   [
-   52.140581,
-   41.871987
+   52.138913,
+   41.814722
   ]
  ],
  "size": [
-  2400,
-  1818
+  4000,
+  3041
  ],
  "points": 22,
  "residual_km_max": 0.0,
- "loo_km_rms": 35.3,
+ "loo_km_rms": 35.4,
  "loo_km": {
   "Kyow / Kyiv": 8.2,
   "Trypil / Trypillia": 3.0,
   "Wasilkow / Vasylkiv": 4.3,
   "Rzisow / Rzhyshchiv": 5.3,
   "Kaniow / Kaniv": 2.8,
-  "Czarnobyl / Chornobyl": 63.7,
-  "Czernihow / Chernihiv": 36.4,
-  "Oczakow / Ochakiv": 36.0,
-  "Bialogrod / Bilhorod-Dnistrovskyi": 14.9,
+  "Czarnobyl / Chornobyl": 63.6,
+  "Czernihow / Chernihiv": 36.6,
+  "Oczakow / Ochakiv": 36.6,
+  "Bialogrod / Bilhorod-Dnistrovskyi": 15.2,
   "Tehinia / Bender": 5.1,
-  "Kilia / Kiliia": 42.4,
-  "Kamieniec / Kamianets-Podilskyi": 78.7,
+  "Kilia / Kiliia": 41.9,
+  "Kamieniec / Kamianets-Podilskyi": 78.8,
   "Orhiow / Orhei": 19.1,
-  "Iazy / Iasi": 69.1,
-  "Ozou / Azov": 26.1,
-  "Temeroj / Temryuk": 61.8,
-  "Kodak (fortress)": 26.6,
+  "Iazy / Iasi": 68.9,
+  "Ozou / Azov": 29.0,
+  "Temeroj / Temryuk": 61.5,
+  "Kodak (fortress)": 28.1,
   "Potiwl / Putyvl": 16.1,
-  "Or / Perekop": 27.5,
-  "Pultawa / Poltava": 13.5,
-  "Romne / Romny": 9.1,
-  "Rilsko / Rylsk": 26.1
+  "Or / Perekop": 26.8,
+  "Pultawa / Poltava": 13.1,
+  "Romne / Romny": 9.4,
+  "Rilsko / Rylsk": 26.0
  }
 }

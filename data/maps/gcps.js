@@ -4,34 +4,34 @@ window.AR_GCPS = {
   "map": "beauplan_delineatio_generalis_1648",
   "image": "beauplan_delineatio_generalis_1648.jpg",
   "image_size": [
-   1500,
-   1166
+   5500,
+   4277
   ],
   "note": "Control points read from town symbols on the scan (pixel x,y from top-left) and matched to present-day locations (lat, lon WGS84). South at top.",
   "mask": [
    [
-    40,
-    36
+    147,
+    132
    ],
    [
-    1460,
-    36
+    5353,
+    132
    ],
    [
-    1460,
-    1134
+    5353,
+    4160
    ],
    [
-    40,
-    1134
+    147,
+    4160
    ]
   ],
   "points": [
    {
     "name": "Kiiow / Kyiv",
     "px": [
-     765,
-     794
+     2805.0,
+     2912.5
     ],
     "lat": 50.455,
     "lon": 30.515
@@ -39,8 +39,8 @@ window.AR_GCPS = {
    {
     "name": "Wygrod / Vyshhorod",
     "px": [
-     762,
-     822
+     2794.0,
+     3015.2
     ],
     "lat": 50.584,
     "lon": 30.49
@@ -48,8 +48,8 @@ window.AR_GCPS = {
    {
     "name": "Browary / Brovary",
     "px": [
-     730,
-     795
+     2676.7,
+     2916.1
     ],
     "lat": 50.511,
     "lon": 30.79
@@ -57,8 +57,8 @@ window.AR_GCPS = {
    {
     "name": "Trypole / Trypillia",
     "px": [
-     761,
-     726
+     2790.3,
+     2663.0
     ],
     "lat": 50.12,
     "lon": 30.78
@@ -66,8 +66,8 @@ window.AR_GCPS = {
    {
     "name": "Kaniow / Kaniv",
     "px": [
-     668,
-     628
+     2449.3,
+     2303.6
     ],
     "lat": 49.75,
     "lon": 31.46
@@ -75,8 +75,8 @@ window.AR_GCPS = {
    {
     "name": "Czerkassy / Cherkasy",
     "px": [
-     651,
-     562
+     2387.0,
+     2061.5
     ],
     "lat": 49.44,
     "lon": 32.06
@@ -84,8 +84,8 @@ window.AR_GCPS = {
    {
     "name": "Perealaw / Pereiaslav",
     "px": [
-     682,
-     691
+     2500.7,
+     2534.7
     ],
     "lat": 50.07,
     "lon": 31.46
@@ -93,8 +93,8 @@ window.AR_GCPS = {
    {
     "name": "Zlotonosza / Zolotonosha",
     "px": [
-     650,
-     607
+     2383.3,
+     2226.5
     ],
     "lat": 49.67,
     "lon": 32.04
@@ -102,8 +102,8 @@ window.AR_GCPS = {
    {
     "name": "Korsun",
     "px": [
-     732,
-     564
+     2684.0,
+     2068.8
     ],
     "lat": 49.42,
     "lon": 31.26
@@ -111,8 +111,8 @@ window.AR_GCPS = {
    {
     "name": "Czehryn / Chyhyryn",
     "px": [
-     568,
-     479
+     2147,
+     1778
     ],
     "lat": 49.08,
     "lon": 32.66
@@ -120,8 +120,8 @@ window.AR_GCPS = {
    {
     "name": "Oster",
     "px": [
-     689,
-     873
+     2526.3,
+     3202.2
     ],
     "lat": 50.95,
     "lon": 30.88
@@ -129,8 +129,8 @@ window.AR_GCPS = {
    {
     "name": "Czernihow / Chernihiv",
     "px": [
-     617,
-     972
+     2262.3,
+     3565.4
     ],
     "lat": 51.49,
     "lon": 31.3
@@ -138,8 +138,8 @@ window.AR_GCPS = {
    {
     "name": "Baturyn",
     "px": [
-     477,
-     860
+     1749.0,
+     3154.6
     ],
     "lat": 51.35,
     "lon": 32.88
@@ -147,8 +147,8 @@ window.AR_GCPS = {
    {
     "name": "Nowogrod / Novhorod-Siverskyi",
     "px": [
-     471,
-     1028
+     1727.0,
+     3770.8
     ],
     "lat": 52.0,
     "lon": 33.26
@@ -156,8 +156,8 @@ window.AR_GCPS = {
    {
     "name": "Rylsk",
     "px": [
-     273,
-     875
+     1001.0,
+     3209.6
     ],
     "lat": 51.57,
     "lon": 34.68
@@ -165,8 +165,8 @@ window.AR_GCPS = {
    {
     "name": "Kursk",
     "px": [
-     133,
-     986
+     437,
+     3622
     ],
     "lat": 51.73,
     "lon": 36.19
@@ -174,8 +174,8 @@ window.AR_GCPS = {
    {
     "name": "Rumne / Romny",
     "px": [
-     443,
-     741
+     1627,
+     2738
     ],
     "lat": 50.75,
     "lon": 33.47
@@ -183,8 +183,8 @@ window.AR_GCPS = {
    {
     "name": "Mirgrod / Myrhorod",
     "px": [
-     466,
-     632
+     1744,
+     2336
     ],
     "lat": 49.97,
     "lon": 33.6
@@ -192,8 +192,8 @@ window.AR_GCPS = {
    {
     "name": "Pultowa / Poltava",
     "px": [
-     373,
-     556
+     1389,
+     2040
     ],
     "lat": 49.59,
     "lon": 34.55
@@ -201,8 +201,8 @@ window.AR_GCPS = {
    {
     "name": "Kodak (fortress)",
     "px": [
-     360,
-     359
+     1320.0,
+     1316.8
     ],
     "lat": 48.37,
     "lon": 35.12
@@ -210,8 +210,8 @@ window.AR_GCPS = {
    {
     "name": "Oczakow / Ochakiv",
     "px": [
-     665,
-     202
+     2463,
+     707
     ],
     "lat": 46.615,
     "lon": 31.54
@@ -219,8 +219,8 @@ window.AR_GCPS = {
    {
     "name": "Tamruk / Temryuk",
     "px": [
-     219,
-     86
+     803.0,
+     315.5
     ],
     "lat": 45.28,
     "lon": 37.38
@@ -228,8 +228,8 @@ window.AR_GCPS = {
    {
     "name": "Akierman / Bilhorod-Dnistrovskyi",
     "px": [
-     769,
-     159
+     2819.7,
+     583.2
     ],
     "lat": 46.2,
     "lon": 30.35
@@ -237,8 +237,8 @@ window.AR_GCPS = {
    {
     "name": "Kilia Nowa / Kiliia",
     "px": [
-     898,
-     102
+     3243,
+     418
     ],
     "lat": 45.448,
     "lon": 29.267
@@ -246,8 +246,8 @@ window.AR_GCPS = {
    {
     "name": "Iasy / Iasi",
     "px": [
-     1192,
-     313
+     4400,
+     1130
     ],
     "lat": 47.16,
     "lon": 27.59
@@ -255,8 +255,8 @@ window.AR_GCPS = {
    {
     "name": "Biala Cerkiew / Bila Tserkva",
     "px": [
-     821,
-     661
+     3010.3,
+     2424.6
     ],
     "lat": 49.8,
     "lon": 30.11
@@ -264,8 +264,8 @@ window.AR_GCPS = {
    {
     "name": "Uman",
     "px": [
-     855,
-     505
+     3170,
+     1863
     ],
     "lat": 48.75,
     "lon": 30.22
@@ -273,8 +273,8 @@ window.AR_GCPS = {
    {
     "name": "Zytomierz / Zhytomyr",
     "px": [
-     939,
-     865
+     3443.0,
+     3172.9
     ],
     "lat": 50.25,
     "lon": 28.66
@@ -282,8 +282,8 @@ window.AR_GCPS = {
    {
     "name": "Czernobel / Chornobyl",
     "px": [
-     783,
-     1018
+     2888,
+     3727
     ],
     "lat": 51.27,
     "lon": 30.22
@@ -291,8 +291,8 @@ window.AR_GCPS = {
    {
     "name": "Ostrog / Ostroh",
     "px": [
-     1187,
-     804
+     4352.3,
+     2949.1
     ],
     "lat": 50.33,
     "lon": 26.52
@@ -300,11 +300,83 @@ window.AR_GCPS = {
    {
     "name": "Lucko / Lutsk",
     "px": [
-     1311,
-     887
+     4820,
+     3281
     ],
     "lat": 50.75,
     "lon": 25.33
+   },
+   {
+    "name": "Lubnie / Lubny",
+    "px": [
+     1959,
+     2389
+    ],
+    "lat": 50.017,
+    "lon": 32.997
+   },
+   {
+    "name": "Mechylow / Mohyliv-Podilskyi",
+    "px": [
+     4106,
+     1811
+    ],
+    "lat": 48.445,
+    "lon": 27.797
+   },
+   {
+    "name": "Iampol / Yampil",
+    "px": [
+     3978,
+     1672
+    ],
+    "lat": 48.24,
+    "lon": 28.283
+   },
+   {
+    "name": "Szarigrod / Sharhorod",
+    "px": [
+     3989,
+     1992
+    ],
+    "lat": 48.752,
+    "lon": 28.081
+   },
+   {
+    "name": "Bar",
+    "px": [
+     4072,
+     2217
+    ],
+    "lat": 49.074,
+    "lon": 27.681
+   },
+   {
+    "name": "Kolomey / Kolomyia",
+    "px": [
+     5007,
+     1965
+    ],
+    "lat": 48.531,
+    "lon": 25.037
+   },
+   {
+    "name": "Sniatyn",
+    "px": [
+     4842,
+     1954
+    ],
+    "lat": 48.447,
+    "lon": 25.568
+   },
+   {
+    "name": "Czartkow / Chortkiv",
+    "px": [
+     4679,
+     2283
+    ],
+    "lat": 49.017,
+    "lon": 25.798
    }
   ]
  },
@@ -312,16 +384,16 @@ window.AR_GCPS = {
   "map": "tabula_ukrainska_1639",
   "image": "tabula_ukrainska_1639.jpg",
   "image_size": [
-   2000,
-   1432
+   7552,
+   5408
   ],
   "note": "Control points read from town symbols on the scan (pixel x,y from top-left) and matched to present-day locations (lat, lon WGS84).",
   "points": [
    {
     "name": "Kyow / Kyiv",
     "px": [
-     1123,
-     1186
+     4240.4,
+     4479.0
     ],
     "lat": 50.455,
     "lon": 30.515
@@ -329,8 +401,8 @@ window.AR_GCPS = {
    {
     "name": "Trypil / Trypillia",
     "px": [
-     1115,
-     1098
+     4210.2,
+     4146.6
     ],
     "lat": 50.12,
     "lon": 30.78
@@ -338,8 +410,8 @@ window.AR_GCPS = {
    {
     "name": "Wasilkow / Vasylkiv",
     "px": [
-     1173,
-     1122
+     4429.2,
+     4237.3
     ],
     "lat": 50.18,
     "lon": 30.32
@@ -347,8 +419,8 @@ window.AR_GCPS = {
    {
     "name": "Rzisow / Rzhyshchiv",
     "px": [
-     1100,
-     1047
+     4153.6,
+     3954.0
     ],
     "lat": 49.97,
     "lon": 31.05
@@ -356,8 +428,8 @@ window.AR_GCPS = {
    {
     "name": "Kaniow / Kaniv",
     "px": [
-     1049,
-     976
+     3961.0,
+     3685.9
     ],
     "lat": 49.75,
     "lon": 31.46
@@ -365,8 +437,8 @@ window.AR_GCPS = {
    {
     "name": "Czarnobyl / Chornobyl",
     "px": [
-     1214,
-     1376
+     4584.1,
+     5196.5
     ],
     "lat": 51.27,
     "lon": 30.22
@@ -374,8 +446,8 @@ window.AR_GCPS = {
    {
     "name": "Czernihow / Chernihiv",
     "px": [
-     936,
-     1376
+     3534.3,
+     5196.5
     ],
     "lat": 51.49,
     "lon": 31.3
@@ -383,8 +455,8 @@ window.AR_GCPS = {
    {
     "name": "Oczakow / Ochakiv",
     "px": [
-     1028,
-     436
+     3881.7,
+     1646.6
     ],
     "lat": 46.615,
     "lon": 31.54
@@ -392,8 +464,8 @@ window.AR_GCPS = {
    {
     "name": "Bialogrod / Bilhorod-Dnistrovskyi",
     "px": [
-     1237,
-     378
+     4670.9,
+     1427.5
     ],
     "lat": 46.2,
     "lon": 30.35
@@ -401,8 +473,8 @@ window.AR_GCPS = {
    {
     "name": "Tehinia / Bender",
     "px": [
-     1318,
-     470
+     4976.8,
+     1775.0
     ],
     "lat": 46.838,
     "lon": 29.478
@@ -410,8 +482,8 @@ window.AR_GCPS = {
    {
     "name": "Kilia / Kiliia",
     "px": [
-     1390,
-     269
+     5248.6,
+     1015.9
     ],
     "lat": 45.448,
     "lon": 29.267
@@ -419,8 +491,8 @@ window.AR_GCPS = {
    {
     "name": "Kamieniec / Kamianets-Podilskyi",
     "px": [
-     1701,
-     942
+     6423.0,
+     3557.5
     ],
     "lat": 48.673,
     "lon": 26.563
@@ -428,8 +500,8 @@ window.AR_GCPS = {
    {
     "name": "Orhiow / Orhei",
     "px": [
-     1370,
-     556
+     5173.1,
+     2099.8
     ],
     "lat": 47.38,
     "lon": 28.82
@@ -437,8 +509,8 @@ window.AR_GCPS = {
    {
     "name": "Iazy / Iasi",
     "px": [
-     1662,
-     550
+     6275.7,
+     2077.1
     ],
     "lat": 47.16,
     "lon": 27.59
@@ -446,8 +518,8 @@ window.AR_GCPS = {
    {
     "name": "Ozou / Azov",
     "px": [
-     209,
-     457
+     789.2,
+     1725.9
     ],
     "lat": 47.11,
     "lon": 39.42
@@ -455,8 +527,8 @@ window.AR_GCPS = {
    {
     "name": "Temeroj / Temryuk",
     "px": [
-     545,
-     225
+     2057.9,
+     849.7
     ],
     "lat": 45.28,
     "lon": 37.38
@@ -464,8 +536,8 @@ window.AR_GCPS = {
    {
     "name": "Kodak (fortress)",
     "px": [
-     640,
-     626
+     2453,
+     2354
     ],
     "lat": 48.37,
     "lon": 35.12
@@ -473,8 +545,8 @@ window.AR_GCPS = {
    {
     "name": "Potiwl / Putyvl",
     "px": [
-     634,
-     1207
+     2394.0,
+     4558.3
     ],
     "lat": 51.34,
     "lon": 33.87
@@ -482,8 +554,8 @@ window.AR_GCPS = {
    {
     "name": "Or / Perekop",
     "px": [
-     856,
-     320
+     3232.3,
+     1208.5
     ],
     "lat": 46.16,
     "lon": 33.69
@@ -491,8 +563,8 @@ window.AR_GCPS = {
    {
     "name": "Pultawa / Poltava",
     "px": [
-     668,
-     870
+     2522.4,
+     3285.6
     ],
     "lat": 49.59,
     "lon": 34.55
@@ -500,8 +572,8 @@ window.AR_GCPS = {
    {
     "name": "Romne / Romny",
     "px": [
-     732,
-     1116
+     2764.0,
+     4214.6
     ],
     "lat": 50.75,
     "lon": 33.47
@@ -509,8 +581,8 @@ window.AR_GCPS = {
    {
     "name": "Rilsko / Rylsk",
     "px": [
-     513,
-     1274
+     1937.1,
+     4811.3
     ],
     "lat": 51.57,
     "lon": 34.68
@@ -518,20 +590,20 @@ window.AR_GCPS = {
   ],
   "mask": [
    [
-    56,
-    62
+    211,
+    234
    ],
    [
-    1898,
-    40
+    7167,
+    151
    ],
    [
-    1897,
-    1381
+    7163,
+    5215
    ],
    [
-    35,
-    1385
+    132,
+    5231
    ]
   ]
  }

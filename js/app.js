@@ -877,6 +877,7 @@
     onClose: () => { const m = edMap; edMap = null; mode = null; if (m) catRefresh(m); },
   });
   let edMap = null;
+  window.AR_DEBUG = { editor };
   function openEditor(m) {
     if (editor.active) editor.close();
     const old = catLayers.get(m.id);

@@ -109,11 +109,22 @@
   /* Warp layer: triangle mesh on a canvas                               */
   /* ------------------------------------------------------------------ */
   const WarpLayer = L.Layer.extend({
-    options: { opacity: 0.75, pane: "hist", cells: 48 },
+    options: { opacity: 0.75, pane: "hist", cells: 32 },
     initialize(imageUrl, gcp, opts) {
       L.setOptions(this, opts);
       this._url = imageUrl; this._img = new Image(); this._ready = false;
-      this._img.onload = () => { this._ready = true; this._buildMesh(); this._redraw(); };
+      this._img.onload = () => {
+        // Draw from a working copy of at most ~4096 px: faster, and within GPU texture limits.
+        const w0 = this._img.naturalWidth, h0 = this._img.naturalHeight, k = Math.min(1, 4096 / Math.max(w0, h0));
+        if (k < 1) {
+          const cv = document.createElement("canvas");
+          cv.width = Math.round(w0 * k); cv.height = Math.round(h0 * k);
+          cv.getContext("2d").drawImage(this._img, 0, 0, cv.width, cv.height);
+          this._src = cv;
+        } else this._src = this._img;
+        this._srcW = this._src.width || this._src.naturalWidth;
+        this._ready = true; this._buildMesh(); this._redraw();
+      };
       this._img.src = imageUrl;
       this.setGcp(gcp);
     },
@@ -143,8 +154,8 @@
     _buildMesh() {
       this._mesh = null;
       if (!this._tps || !this._ready) return;
-      const [W, H] = [this._img.naturalWidth, this._img.naturalHeight];
-      const g = this._gcp, sc = g.image_size ? W / g.image_size[0] : 1; // gcps may refer to a smaller copy
+      const W = this._srcW, H = this._src.height || this._src.naturalHeight;
+      const g = this._gcp, sc = g.image_size ? W / g.image_size[0] : W / this._img.naturalWidth; // gcp pixels -> working-copy pixels
       const mask = (g.mask || [[0, 0], [W / sc, 0], [W / sc, H / sc], [0, H / sc]]);
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       mask.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
@@ -166,6 +177,7 @@
       this._mesh = { V, nx, ny, sc, outline };
     },
     _redraw() {
+      const t0 = performance.now();
       const map = this._map;
       if (!map || !this._cv) return;
       const size = map.getSize(), tl = map.containerPointToLayerPoint([0, 0]);
@@ -181,7 +193,7 @@
       const s = Math.pow(2, map.getZoom()), o = map.getPixelOrigin();
       const ox = o.x + tl.x, oy = o.y + tl.y; // world(z) -> canvas
       const P = (w) => [(w[0] * s - ox) * dpr, (w[1] * s - oy) * dpr];
-      const { V, nx, ny, sc, outline } = this._mesh, img = this._img;
+      const { V, nx, ny, sc, outline } = this._mesh, img = this._src;
       // clip to the mapped neatline
       ctx.save();
       ctx.beginPath();
@@ -198,6 +210,7 @@
         tri(ctx, img, sc, b, d, c, pb, pd, pc);
       }
       ctx.restore();
+      this.lastDrawMs = Math.round(performance.now() - t0);
     },
   });
 
@@ -220,7 +233,8 @@
     ctx.beginPath(); ctx.moveTo(qa[0], qa[1]); ctx.lineTo(qb[0], qb[1]); ctx.lineTo(qc[0], qc[1]); ctx.closePath(); ctx.clip();
     ctx.setTransform(m11, m21, m12, m22, m13, m23);
     const x0 = Math.max(0, Math.floor(Math.min(sx0, sx1, sx2)) - 2), y0 = Math.max(0, Math.floor(Math.min(sy0, sy1, sy2)) - 2);
-    const x1 = Math.min(img.naturalWidth, Math.ceil(Math.max(sx0, sx1, sx2)) + 2), y1 = Math.min(img.naturalHeight, Math.ceil(Math.max(sy0, sy1, sy2)) + 2);
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const x1 = Math.min(iw, Math.ceil(Math.max(sx0, sx1, sx2)) + 2), y1 = Math.min(ih, Math.ceil(Math.max(sy0, sy1, sy2)) + 2);
     if (x1 > x0 && y1 > y0) ctx.drawImage(img, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
     ctx.restore();
   }
@@ -406,7 +420,7 @@
     $(".gfit").addEventListener("click", () => { const vw = view.clientWidth, vh = view.clientHeight; T.s = Math.min(vw / W, vh / H); T.x = (vw - W * T.s) / 2; T.y = (vh - H * T.s) / 2; render(); });
 
     return {
-      open, close, handleMapClick, get active() { return !!m; }, get gcp() { return gcp; }, get map() { return m; },
+      open, close, handleMapClick, get active() { return !!m; }, get gcp() { return gcp; }, get map() { return m; }, get layer() { return layer; },
       setOpacity(o) { if (layer) layer.setOpacity(o); },
       replace(newGcp) { gcp = JSON.parse(JSON.stringify(newGcp)); gcp.points.forEach((p) => { if (p.enabled == null) p.enabled = true; }); sel = null; recompute(); },
     };
