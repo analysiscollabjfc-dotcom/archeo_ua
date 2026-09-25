@@ -233,3 +233,6 @@ table.depth td, table.depth th { font-variant-numeric: tabular-nums; }
 .pot-ctl a { font-weight: 700; color: var(--muted) !important; }
 .pot-ctl a.on { background: var(--c) !important; color: #111 !important; }
 @media (max-width: 760px) { .gcp-ed { left: 8px; right: 8px; width: auto; } .gcp-ed .gside { width: 200px; } }
+.gcp-ed .gop { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.gcp-ed .gop input { width: 110px; accent-color: var(--gold); }
+.gcp-ed .gop output { width: 34px; color: var(--gold); font-variant-numeric: tabular-nums; }

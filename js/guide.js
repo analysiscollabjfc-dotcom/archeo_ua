@@ -51,6 +51,7 @@ window.AR_GUIDE = function () {
   <li><b>Catalogue maps</b> (<code>data/maps/catalog.js</code>) have online tiles and an offline copy warped from the original scan. <b>Edit points</b> opens the control-point editor:
     <ul>
       <li>Drag a numbered point on the scan or its pin on the map; the warped map updates live.</li>
+      <li>The <b>Overlay</b> slider in the editor header sets the opacity of the warped map; press <b>T</b> to hide/show it quickly.</li>
       <li><b>+ Add point</b>: click the place on the scan, then the same place on the map. Good points: churches, castles, confluences, river mouths, old town centres.</li>
       <li>Each point shows its <b>leave-one-out error</b>: how far it would be predicted from all other points (green &lt; 10 km, yellow &lt; 25, orange &lt; 50, red ≥ 50). Red points are either misplaced or in a badly drawn part of the map; untick to test without deleting.</li>
       <li><b>Save</b> keeps the points in this browser and uses them for the offline copy. <b>Export .gcps.json</b> to make them permanent in the repository (then run <code>tools/warp_map.py</code>); <b>Export QGIS .points</b> / <b>Import</b> exchange points with the QGIS Georeferencer.</li>

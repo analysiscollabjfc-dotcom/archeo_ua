@@ -883,11 +883,28 @@
     if (old) { L_.histCat.removeLayer(old); catLayers.delete(m.id); }
     edMap = m; mode = "gcpedit";
     editor.open(m, gcpEdits[m.id] || AR_GCPS[m.id], cst(m).opacity);
+    setEdOpacity(cst(m).opacity);
     edDirty = false; $("#geSave").classList.remove("primary");
     const b = m.offline ? m.offline.bounds : null;
     if (b) map.flyToBounds(b, { duration: 0.6 });
     if (!isOn({ key: "hist", on: true })) { layerState.hist = true; applyLayers(); renderLayerList(); }
   }
+  // Overlay opacity while editing (remembered per map); T toggles hide/show
+  let edHidden = null;
+  function setEdOpacity(v) {
+    $("#geOp").value = v; $("#geOpOut").textContent = Math.round(v * 100) + "%";
+    editor.setOpacity(v);
+  }
+  $("#geOp").addEventListener("input", (e) => {
+    const v = +e.target.value; edHidden = null; setEdOpacity(v);
+    if (edMap) { cst(edMap).opacity = v; store.set("ar_catalog", catState); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (!editor.active || e.key.toLowerCase() !== "t" || /input|textarea|select/i.test(e.target.tagName)) return;
+    if (edHidden == null) { edHidden = +$("#geOp").value; setEdOpacity(0); }
+    else { setEdOpacity(edHidden); edHidden = null; }
+  });
+
   $("#geSave").addEventListener("click", () => {
     if (!edMap) return;
     gcpEdits[edMap.id] = editor.gcp; store.set("ar_gcps_edit", gcpEdits);
