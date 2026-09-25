@@ -811,7 +811,7 @@
       ? new ARGcp.WarpLayer(m.original, edited, { pane: "hist", opacity: st.opacity })
       : L.imageOverlay(m.offline.image, m.offline.bounds, { pane: "hist", opacity: st.opacity, interactive: false, attribution: `${esc(m.title)} (${m.year}), offline copy` });
     if (st.mode === "offline" || !m.online || m._failed && st.mode === "auto") {
-      m._status = (st.mode === "offline" ? "offline copy" : "offline copy (online tiles unavailable)") + (edited ? ", your edited points" : "");
+      m._status = (st.mode === "offline" ? "offline copy" : !m.online ? "offline copy (no online tiles yet)" : "offline copy (online tiles unavailable)") + (edited ? ", your edited points" : "");
       return offline();
     }
     const o = m.online, b = o.bounds;

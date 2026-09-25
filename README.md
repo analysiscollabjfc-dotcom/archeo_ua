@@ -71,6 +71,7 @@ To add a map:
 | Year | Map | Author | Offline fit |
 |---|---|---|---|
 | 1639 | Tabula geographica Ukrainska | Unknown | TPS, 22 points, ~35 km typical error |
+| 1648 | Delineatio Generalis Camporum Desertorum vulgo Ukraina | Guillaume Le Vasseur de Beauplan | TPS, 31 points, ~34 km typical error (core Dnipro basin much better) |
 
 ## Adding a 30 m study area
 

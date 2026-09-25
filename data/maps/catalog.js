@@ -35,4 +35,21 @@ window.AR_MAPS = [
     original: "data/maps/tabula_ukrainska_1639.jpg",
     gcps: "data/maps/tabula_ukrainska_1639.gcps.json",
   },
+  {
+    id: "beauplan_delineatio_generalis_1648",
+    title: "Delineatio Generalis Camporum Desertorum vulgo Ukraina",
+    year: 1648,
+    author: "Guillaume Le Vasseur de Beauplan",
+    notes: "General map of Ukraine, engraved by W. Hondius (Gdańsk). South at the top. Much more accurate than the 1639 sketch in the Dnipro basin; edges (Azov, Kuban, Walachia, Volhynia) are rougher. No online tiles yet: add a MapTiler TileJSON here when available.",
+    source: null,
+    online: null,
+    offline: {
+      image: "data/maps/beauplan_delineatio_generalis_1648.warped.webp",
+      bounds: [[44.59262, 23.844079], [52.463212, 39.435679]],
+      method: "thin-plate spline, 31 control points",
+      error_km: 33.8,
+    },
+    original: "data/maps/beauplan_delineatio_generalis_1648.jpg",
+    gcps: "data/maps/beauplan_delineatio_generalis_1648.gcps.json",
+  },
 ];

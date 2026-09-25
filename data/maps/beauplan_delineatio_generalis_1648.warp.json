@@ -1,0 +1,53 @@
+{
+ "method": "thin-plate spline (exact)",
+ "bounds": [
+  [
+   44.59262,
+   23.844079
+  ],
+  [
+   52.463212,
+   39.435679
+  ]
+ ],
+ "size": [
+  2400,
+  1835
+ ],
+ "points": 31,
+ "residual_km_max": 0.0,
+ "loo_km_rms": 33.8,
+ "loo_km": {
+  "Kiiow / Kyiv": 2.2,
+  "Wygrod / Vyshhorod": 3.6,
+  "Browary / Brovary": 4.4,
+  "Trypole / Trypillia": 12.0,
+  "Kaniow / Kaniv": 25.3,
+  "Czerkassy / Cherkasy": 8.2,
+  "Perealaw / Pereiaslav": 17.4,
+  "Zlotonosza / Zolotonosha": 20.3,
+  "Korsun": 17.4,
+  "Czehryn / Chyhyryn": 21.7,
+  "Oster": 2.5,
+  "Czernihow / Chernihiv": 25.8,
+  "Baturyn": 3.5,
+  "Nowogrod / Novhorod-Siverskyi": 47.4,
+  "Rylsk": 29.6,
+  "Kursk": 48.0,
+  "Rumne / Romny": 5.8,
+  "Mirgrod / Myrhorod": 8.6,
+  "Pultowa / Poltava": 8.0,
+  "Kodak (fortress)": 36.5,
+  "Oczakow / Ochakiv": 14.9,
+  "Tamruk / Temryuk": 126.3,
+  "Akierman / Bilhorod-Dnistrovskyi": 15.2,
+  "Kilia Nowa / Kiliia": 22.6,
+  "Iasy / Iasi": 64.6,
+  "Biala Cerkiew / Bila Tserkva": 19.0,
+  "Uman": 24.1,
+  "Zytomierz / Zhytomyr": 42.0,
+  "Czernobel / Chornobyl": 31.0,
+  "Ostrog / Ostroh": 22.8,
+  "Lucko / Lutsk": 8.3
+ }
+}
