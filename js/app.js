@@ -389,7 +389,10 @@
     $("#pCount").textContent = PERIODS.filter((p) => periodActive(p.id)).length + " shown";
     $("#pFrom").value = pState.from; $("#pTo").value = pState.to; $("#pUndated").checked = pState.undated;
   }
-  function periodsChanged() { store.set("ar_periods", pState); renderPeriods(); drawSites(); }
+  function periodsChanged() {
+    store.set("ar_periods", pState); renderPeriods(); drawSites();
+    if (typeof CATALOG !== "undefined" && $("#catWindow").checked) CATALOG.forEach(catRefresh);
+  }
   $("#periodList").addEventListener("change", (e) => {
     const id = e.target.dataset.p; if (!id) return;
     pState.on = e.target.checked ? pState.on.concat(id) : pState.on.filter((x) => x !== id);
@@ -696,7 +699,9 @@
   /* ------------------------------------------------------------------ */
   /* Historical maps                                                     */
   /* ------------------------------------------------------------------ */
-  L_.hist = L.layerGroup();
+  L_.histUser = L.layerGroup();
+  L_.histCat = L.layerGroup();
+  L_.hist = L.layerGroup([L_.histUser, L_.histCat]);
   let histOnline = store.get("ar_hist", []);
   let scans = [];
   const histLayers = new Map();
@@ -706,14 +711,15 @@
     let l;
     if (h.kind === "scan") l = new H.AffineImage(h.url, h.M, { pane: "hist", opacity: h.opacity });
     else if (h.layers) l = L.tileLayer.wms(h.url, { layers: h.layers, format: "image/png", transparent: true, pane: "hist", opacity: h.opacity });
-    else l = L.tileLayer(h.url, { pane: "hist", opacity: h.opacity, maxZoom: 19, attribution: h.name });
+    else l = L.tileLayer(h.url, { pane: "hist", opacity: h.opacity, maxZoom: 19, attribution: h.name,
+      minNativeZoom: h.minzoom || 0, maxNativeZoom: h.maxzoom || 19, bounds: h.bounds ? [[h.bounds[1], h.bounds[0]], [h.bounds[3], h.bounds[2]]] : undefined });
     histLayers.set(h.id, l);
     return l;
   }
   function renderHist() {
     const all = histOnline.concat(scans);
-    L_.hist.clearLayers();
-    all.forEach((h) => { if (h.on !== false) L_.hist.addLayer(histLayerFor(h)); });
+    L_.histUser.clearLayers();
+    all.forEach((h) => { if (h.on !== false) L_.histUser.addLayer(histLayerFor(h)); });
     $("#histList").innerHTML = all.map((h) => `<li data-id="${h.id}"><div class="title"><label class="chk"><input type="checkbox" data-hon ${h.on !== false ? "checked" : ""}> ${esc(h.name)}${h.year ? " (" + h.year + ")" : ""}</label>
       <button class="btn" data-hdel title="Remove">✕</button></div>
       <div class="meta">${h.kind === "scan" ? `Georeferenced scan · ${h.gcps.length} points · RMS ~${Math.round(h.rmsM)} m` : h.layers ? "WMS" : "Tiles"}</div>
@@ -724,7 +730,7 @@
       li.querySelector("[data-hop]").addEventListener("input", (e) => { h.opacity = +e.target.value; histLayerFor(h).setOpacity(h.opacity); persistHist(h); });
       li.querySelector("[data-hdel]").addEventListener("click", async () => {
         if (!confirm(`Remove "${h.name}"?`)) return;
-        L_.hist.removeLayer(histLayerFor(h)); histLayers.delete(h.id);
+        L_.histUser.removeLayer(histLayerFor(h)); histLayers.delete(h.id);
         if (h.kind === "scan") { await H.idbDel(h.id); scans = scans.filter((x) => x !== h); }
         else { histOnline = histOnline.filter((x) => x !== h); store.set("ar_hist", histOnline); }
         renderHist();
@@ -736,11 +742,20 @@
     else store.set("ar_hist", histOnline);
   }, 300);
   function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-  $("#hAdd").addEventListener("click", () => {
-    const url = $("#hUrl").value.trim();
+  $("#hAdd").addEventListener("click", async () => {
+    let url = $("#hUrl").value.trim();
     if (!url) return;
+    let tj = null;
+    if (/tiles\.json|tilejson/i.test(url)) {
+      // TileJSON: read the tile template, zoom range and bounds from it
+      try { tj = await (await fetch(url)).json(); } catch (e) { alert("Could not read the TileJSON: " + e.message); return; }
+      url = tj.tiles && tj.tiles[0];
+      if (!url) { alert("No tile URL in this TileJSON."); return; }
+      if (!$("#hName").value.trim() && tj.name) $("#hName").value = tj.name;
+    }
     if (!$("#hLayers").value.trim() && !/\{z\}/.test(url)) { alert("Tile URLs need {z}, {x} and {y} placeholders; for WMS fill in the layers field."); return; }
-    histOnline.push({ id: "h_" + uid(), kind: "online", name: $("#hName").value.trim() || "Historical map", url, layers: $("#hLayers").value.trim(), year: +$("#hYear").value || null, opacity: 0.8, on: true });
+    histOnline.push({ id: "h_" + uid(), kind: "online", name: $("#hName").value.trim() || "Historical map", url, layers: $("#hLayers").value.trim(), year: +$("#hYear").value || null, opacity: 0.8, on: true,
+      minzoom: tj ? tj.minzoom : null, maxzoom: tj ? tj.maxzoom : null, bounds: tj ? tj.bounds : null });
     store.set("ar_hist", histOnline); renderHist();
     ["#hName", "#hUrl", "#hLayers", "#hYear"].forEach((s) => { $(s).value = ""; });
   });
@@ -749,6 +764,69 @@
     scans = list.map((s) => Object.assign(s, { kind: "scan", url: URL.createObjectURL(s.blob) }));
     renderHist();
   }).catch(() => renderHist());
+
+  /* ---- Map catalogue (data/maps/catalog.js): online tiles with offline backup ---- */
+  const CATALOG = (window.AR_MAPS || []).slice().sort((a, b) => a.year - b.year);
+  const catState = store.get("ar_catalog", {});
+  const catLayers = new Map();
+  const cst = (m) => (catState[m.id] = catState[m.id] || { on: false, opacity: 0.75, mode: "auto" });
+  function catWindow() { return [PERIODS[pState.from].from, PERIODS[pState.to].to]; }
+  function catMake(m) {
+    const st = cst(m);
+    const offline = () => L.imageOverlay(m.offline.image, m.offline.bounds, { pane: "hist", opacity: st.opacity, interactive: false,
+      attribution: `${esc(m.title)} (${m.year}), offline copy` });
+    if (st.mode === "offline" || !m.online || m._failed && st.mode === "auto") { m._status = st.mode === "offline" ? "offline copy" : "offline copy (online tiles unavailable)"; return offline(); }
+    const o = m.online, b = o.bounds;
+    const tl = L.tileLayer(o.tiles, { pane: "hist", opacity: st.opacity, maxZoom: 19, minNativeZoom: o.minzoom, maxNativeZoom: o.maxzoom,
+      bounds: b ? [[b[1], b[0]], [b[3], b[2]]] : undefined, attribution: `${esc(m.title)} (${m.year}) · ${esc(o.provider || "online")}` });
+    let ok = 0, bad = 0;
+    m._status = "online";
+    tl.on("tileload", () => { ok++; });
+    tl.on("tileerror", () => {
+      bad++;
+      // Auto mode: switch to the offline copy if the service does not answer.
+      if (st.mode === "auto" && m.offline && !ok && bad >= 3 && !m._failed) {
+        m._failed = true;
+        catRefresh(m);
+      }
+    });
+    return tl;
+  }
+  function catRefresh(m) {
+    const old = catLayers.get(m.id);
+    if (old) { L_.histCat.removeLayer(old); catLayers.delete(m.id); }
+    const st = cst(m);
+    const [y0, y1] = catWindow();
+    const inWin = !$("#catWindow").checked || (m.year >= y0 && m.year <= y1);
+    if (st.on && inWin) { const l = catMake(m); catLayers.set(m.id, l); L_.histCat.addLayer(l); }
+    renderCatalog();
+  }
+  function renderCatalog() {
+    const [y0, y1] = catWindow(), win = $("#catWindow").checked;
+    $("#catCount").textContent = CATALOG.length;
+    $("#catList").innerHTML = CATALOG.map((m) => { const st = cst(m), out = win && (m.year < y0 || m.year > y1);
+      return `<li data-id="${m.id}" style="opacity:${out ? 0.5 : 1}">
+        <div class="title"><label class="chk"><input type="checkbox" data-con ${st.on ? "checked" : ""}> ${esc(m.title)}</label><span class="score">${m.year}</span></div>
+        <div class="meta">${esc(m.author || "Unknown")}${out ? " · outside time window" : ""}${st.on && catLayers.has(m.id) ? " · showing " + esc(m._status || "") : ""}</div>
+        <div class="row" style="margin:6px 0 0">
+          <select data-cmode style="width:auto">${["auto", "online", "offline"].map((k) => `<option value="${k}" ${st.mode === k ? "selected" : ""} ${k === "online" && !m.online || k === "offline" && !m.offline ? "disabled" : ""}>${{ auto: "Auto (online, else offline)", online: "Online tiles", offline: "Offline copy" }[k]}</option>`).join("")}</select>
+          <button class="btn" data-czoom title="Zoom to map">⌖</button>
+        </div>
+        <input type="range" min="0" max="1" step="0.05" value="${st.opacity}" data-cop style="width:100%;accent-color:var(--gold)">
+        <div class="meta">${m.offline ? `Offline: ${esc(m.offline.method)}, ~${m.offline.error_km} km typical error · ` : ""}${m.original ? `<a href="${esc(m.original)}" target="_blank">original scan</a> · ` : ""}${m.source ? `<a href="${esc(m.source)}" target="_blank" rel="noopener">source</a>` : ""}</div>
+        ${m.notes ? `<div class="body">${esc(m.notes)}</div>` : ""}</li>`; }).join("") || `<li class="meta">No maps in data/maps/catalog.js.</li>`;
+    $$("#catList li[data-id]").forEach((li) => {
+      const m = CATALOG.find((x) => x.id === li.dataset.id), st = cst(m);
+      const save = () => store.set("ar_catalog", catState);
+      li.querySelector("[data-con]").addEventListener("change", (e) => { st.on = e.target.checked; save(); catRefresh(m); });
+      li.querySelector("[data-cmode]").addEventListener("change", (e) => { st.mode = e.target.value; m._failed = false; save(); catRefresh(m); });
+      li.querySelector("[data-cop]").addEventListener("input", (e) => { st.opacity = +e.target.value; save(); const l = catLayers.get(m.id); if (l) l.setOpacity(st.opacity); });
+      li.querySelector("[data-czoom]").addEventListener("click", () => map.flyToBounds(m.offline ? m.offline.bounds : [[m.online.bounds[1], m.online.bounds[0]], [m.online.bounds[3], m.online.bounds[2]]], { duration: 0.8 }));
+    });
+  }
+  $("#catWindow").addEventListener("change", () => CATALOG.forEach(catRefresh));
+  CATALOG.forEach((m) => { if (cst(m).on) catRefresh(m); });
+  renderCatalog();
 
   /* ---- Georeferencing workflow ---- */
   const gr = { img: null, blob: null, w: 0, h: 0, scale: 1, tx: 0, ty: 0, pairs: [], pendingImg: null, preview: null, mapMarkers: L.layerGroup().addTo(map) };

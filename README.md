@@ -46,6 +46,26 @@ Works offline except for basemap tiles, online historical map layers and the OSM
 
 DEM: Copernicus GLO-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the EU and ESA.
 
+## Historical map catalogue
+
+`data/maps/catalog.js` lists the old maps, sorted by year in the **Old maps** tab. Each map has:
+
+- **online tiles** (e.g. georeferenced in MapTiler Cloud). Tiles are stretched beyond the service's maximum zoom, so the map does not disappear when you zoom in.
+- an **offline copy**: the original scan in `data/maps/` warped with a thin-plate spline by `tools/warp_map.py` from its control-point file `<id>.gcps.json`.
+
+The default **Auto** mode uses the online tiles and switches to the offline copy when they fail to load.
+
+To add a map:
+
+1. Copy the scan to `data/maps/<id>.jpg`.
+2. Write `data/maps/<id>.gcps.json`: control points as pixel `[x, y]` on the scan plus `lat`/`lon`, and an optional `mask` polygon (the neatline).
+3. Run `python3 tools/warp_map.py data/maps/<id>.gcps.json`. This writes `<id>.warped.webp`, `<id>.warp.json` (bounds and error estimate) and `<id>.points`, a QGIS Georeferencer file you can refine in QGIS.
+4. Add an entry to `catalog.js`.
+
+| Year | Map | Author | Offline fit |
+|---|---|---|---|
+| 1639 | Tabula geographica Ukrainska | Unknown | TPS, 22 points, ~35 km typical error |
+
 ## Adding a 30 m study area
 
 1. Add `name_30m: (west, south, east, north, 1, 3600)` to `REGIONS` in `tools/dem_fetch.py`.

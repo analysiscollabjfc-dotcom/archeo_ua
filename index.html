@@ -91,13 +91,16 @@
 
     <!-- OLD MAPS -->
     <section class="pane" id="pane-maps">
-      <h2>Historical map layers</h2>
+      <h2>Map catalogue <span class="pill" id="catCount"></span></h2>
+      <label class="chk"><input type="checkbox" id="catWindow"> Only maps inside the Periods time window</label>
+      <ul id="catList" class="cards"></ul>
+      <h2>My added maps</h2>
       <div id="histList" class="cards"></div>
       <div class="row"><button class="btn" id="swipeBtn">Compare (swipe)</button></div>
       <h3>Add online map</h3>
       <div class="filters">
         <input type="text" id="hName" placeholder="Name, e.g. Schubert 3-verst (1860s)">
-        <input type="text" id="hUrl" placeholder="Tile URL with {z}/{x}/{y}, or WMS base URL">
+        <input type="text" id="hUrl" placeholder="TileJSON link, tile URL with {z}/{x}/{y}, or WMS base URL">
         <input type="text" id="hLayers" placeholder="WMS layers (leave empty for XYZ tiles)">
         <input type="number" id="hYear" placeholder="Map year (e.g. 1868)">
       </div>
@@ -212,6 +215,7 @@
   <script src="data/raster_talne_30m.js"></script>
   <script src="data/streams_ukraine.js"></script>
   <script src="data/streams_talne_30m.js"></script>
+  <script src="data/maps/catalog.js"></script>
   <script src="js/depth.js"></script>
   <script src="js/rasters.js"></script>
   <script src="js/histmaps.js"></script>
