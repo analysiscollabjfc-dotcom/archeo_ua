@@ -48,6 +48,13 @@ window.AR_GUIDE = function () {
 <ul>
   <li><b>Online</b>: paste a tile template (<code>https://…/{z}/{x}/{y}.png</code>) or a WMS base URL plus layer name. Useful series for Ukraine: Habsburg military surveys (Galicia, Bukovina, Transcarpathia), Schubert / Russian 3-verst military topographic maps (1840s–1910s), Polish WIG 1:100k (interwar, west), Soviet 1:100k/1:50k (1940s–80s), German WWII aerial photography. Availability and terms vary by provider.</li>
   <li><b>Scans</b>: stored in this browser (IndexedDB). Affine fit from ≥ 3 control points; use 6–10 well-spread points and check the RMS. Sheets with strong distortion or other projections need more points than an affine fit handles; georeference those in QGIS and add them as tiles.</li>
+  <li><b>Catalogue maps</b> (<code>data/maps/catalog.js</code>) have online tiles and an offline copy warped from the original scan. <b>Edit points</b> opens the control-point editor:
+    <ul>
+      <li>Drag a numbered point on the scan or its pin on the map; the warped map updates live.</li>
+      <li><b>+ Add point</b>: click the place on the scan, then the same place on the map. Good points: churches, castles, confluences, river mouths, old town centres.</li>
+      <li>Each point shows its <b>leave-one-out error</b>: how far it would be predicted from all other points (green &lt; 10 km, yellow &lt; 25, orange &lt; 50, red ≥ 50). Red points are either misplaced or in a badly drawn part of the map; untick to test without deleting.</li>
+      <li><b>Save</b> keeps the points in this browser and uses them for the offline copy. <b>Export .gcps.json</b> to make them permanent in the repository (then run <code>tools/warp_map.py</code>); <b>Export QGIS .points</b> / <b>Import</b> exchange points with the QGIS Georeferencer.</li>
+    </ul></li>
   <li><b>Swipe</b> clips all historical layers to the left of the handle for before/after comparison.</li>
   <li><b>Digitise</b> barrow symbols, vanished villages, mills or earthworks. Barrow/earthwork symbols are stored undated (the map only proves they existed by then); buildings and villages take the map's period.</li>
 </ul>

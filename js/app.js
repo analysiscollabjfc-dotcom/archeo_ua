@@ -110,7 +110,7 @@
   const L_ = {};
   L_.pot_barrow = L.layerGroup(); L_.pot_settlement = L.layerGroup(); L_.pot_hillfort = L.layerGroup();
   L_.landform = L.layerGroup(); L_.streams = L.layerGroup();
-  L_.relief = L.imageOverlay("data/relief_ua.jpg", [[44.3, 22.0], [52.4, 40.3]], { pane: "relief", opacity: 0.7, interactive: false });
+  L_.relief = L.imageOverlay("data/relief_ua.webp", [[44.3, 22.0], [52.4, 40.3]], { pane: "relief", opacity: 0.7, interactive: false });
   L_.admin = L.layerGroup([
     L.geoJSON(BASE.oblasts, { pane: "admin", interactive: false, style: { color: "#c9c3b5", weight: 0.7, opacity: 0.6, fill: false, dashArray: "3 3" } }),
     L.geoJSON(BASE.border, { pane: "admin", interactive: false, style: { color: "#d7a86e", weight: 2, opacity: 0.9, fill: false } }),
@@ -129,20 +129,30 @@
   const LF_RGB = LANDFORMS.map((l) => [parseInt(l.color.slice(1, 3), 16), parseInt(l.color.slice(3, 5), 16), parseInt(l.color.slice(5, 7), 16)]);
   let overlayOpacity = store.get("ar_op", 0.6);
 
-  async function loadRasters() {
-    const metas = Object.values(window.AR_RASTERS || {});
-    rasters = await Promise.all(metas.map((m) => new Raster(m).load()));
-    rasters.sort((a, b) => b.res_m - a.res_m); // coarse first, fine drawn on top
+  // Potential overlays, showing only cells at or above the threshold.
+  let potMin = store.get("ar_potmin", 0.35);
+  function buildPotentials() {
+    POT.forEach((p) => L_[p.key].clearLayers());
+    const thr = Math.round(potMin * 255);
     for (const r of rasters) {
       for (const p of POT) {
         const ov = renderOverlay(r, (R, i) => {
           const v = R.P[i + p.band];
-          if (v < 30) return null;
-          const t = v / 255;
-          return [p.rgb[0], p.rgb[1], p.rgb[2], Math.round(40 + 215 * t * t)];
+          if (v < thr) return null;
+          const t = (v - thr) / Math.max(1, 255 - thr);
+          return [p.rgb[0], p.rgb[1], p.rgb[2], Math.round(90 + 165 * t)];
         }, 2800);
         L_[p.key].addLayer(L.imageOverlay(ov.url, ov.bounds, { pane: "pot", opacity: overlayOpacity, interactive: false }));
       }
+    }
+  }
+
+  async function loadRasters() {
+    const metas = Object.values(window.AR_RASTERS || {});
+    rasters = await Promise.all(metas.map((m) => new Raster(m).load()));
+    rasters.sort((a, b) => b.res_m - a.res_m); // coarse first, fine drawn on top
+    buildPotentials();
+    for (const r of rasters) {
       const lf = renderOverlay(r, (R, i) => { const c = LF_RGB[R.T[i]]; return R.T[i] === 0 ? null : [c[0], c[1], c[2], 170]; }, 2800);
       L_.landform.addLayer(L.imageOverlay(lf.url, lf.bounds, { pane: "landform", opacity: overlayOpacity, interactive: false }));
       if (r.res_m < 200) {
@@ -409,7 +419,7 @@
   /* ------------------------------------------------------------------ */
   const LAYER_DEFS = [
     { key: "sites", label: "Archaeological sites", swatch: "#d7a86e", round: true, on: true },
-    { key: "pot_settlement", label: "Settlement potential", swatch: "rgb(60,190,90)", on: true },
+    { key: "pot_settlement", label: "Settlement potential", swatch: "rgb(60,190,90)", on: false },
     { key: "pot_barrow", label: "Barrow potential", swatch: "rgb(230,90,40)", on: false },
     { key: "pot_hillfort", label: "Hillfort potential", swatch: "rgb(170,90,230)", on: false },
     { key: "landform", label: "Landforms (depth model input)", swatch: "linear-gradient(90deg,#4fc3f7,#aed581,#ffb74d,#e57373,#fff176)", on: false },
@@ -436,9 +446,32 @@
       if (isOn(d) && !map.hasLayer(lay)) lay.addTo(map);
       if (!isOn(d) && map.hasLayer(lay)) map.removeLayer(lay);
     });
+    syncPotButtons();
+  }
+  // Quick potential toggles on the map
+  const PotControl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd() {
+      const div = L.DomUtil.create("div", "leaflet-bar pot-ctl");
+      div.innerHTML = POT.map((p) => `<a href="#" data-pk="${p.key}" title="${p.label}" style="--c:rgb(${p.rgb})">${p.label[0]}</a>`).join("");
+      L.DomEvent.disableClickPropagation(div);
+      div.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const d = LAYER_DEFS.find((x) => x.key === a.dataset.pk);
+        layerState[d.key] = !isOn(d); store.set("ar_layers", layerState); applyLayers(); renderLayerList();
+      }));
+      return div;
+    },
+  });
+  new PotControl().addTo(map);
+  function syncPotButtons() {
+    document.querySelectorAll(".pot-ctl a").forEach((a) => a.classList.toggle("on", isOn(LAYER_DEFS.find((x) => x.key === a.dataset.pk))));
   }
   $("#layerList").addEventListener("change", (e) => { const k = e.target.dataset.layer; if (!k) return; layerState[k] = e.target.checked; store.set("ar_layers", layerState); applyLayers(); });
   $("#op").value = overlayOpacity; $("#opOut").textContent = fmt(overlayOpacity);
+  $("#potMin").value = potMin; $("#potMinOut").textContent = fmt(potMin);
+  const rebuildPot = debounce(() => { if (rasters.length) buildPotentials(); }, 250);
+  $("#potMin").addEventListener("input", (e) => { potMin = +e.target.value; $("#potMinOut").textContent = fmt(potMin); store.set("ar_potmin", potMin); rebuildPot(); });
   $("#op").addEventListener("input", (e) => {
     overlayOpacity = +e.target.value; $("#opOut").textContent = fmt(overlayOpacity); store.set("ar_op", overlayOpacity);
     ["pot_barrow", "pot_settlement", "pot_hillfort", "landform"].forEach((k) => L_[k].eachLayer((l) => l.setOpacity(overlayOpacity)));
@@ -773,9 +806,14 @@
   function catWindow() { return [PERIODS[pState.from].from, PERIODS[pState.to].to]; }
   function catMake(m) {
     const st = cst(m);
-    const offline = () => L.imageOverlay(m.offline.image, m.offline.bounds, { pane: "hist", opacity: st.opacity, interactive: false,
-      attribution: `${esc(m.title)} (${m.year}), offline copy` });
-    if (st.mode === "offline" || !m.online || m._failed && st.mode === "auto") { m._status = st.mode === "offline" ? "offline copy" : "offline copy (online tiles unavailable)"; return offline(); }
+    const edited = gcpEdits[m.id];
+    const offline = () => edited && m.original
+      ? new ARGcp.WarpLayer(m.original, edited, { pane: "hist", opacity: st.opacity })
+      : L.imageOverlay(m.offline.image, m.offline.bounds, { pane: "hist", opacity: st.opacity, interactive: false, attribution: `${esc(m.title)} (${m.year}), offline copy` });
+    if (st.mode === "offline" || !m.online || m._failed && st.mode === "auto") {
+      m._status = (st.mode === "offline" ? "offline copy" : "offline copy (online tiles unavailable)") + (edited ? ", your edited points" : "");
+      return offline();
+    }
     const o = m.online, b = o.bounds;
     const tl = L.tileLayer(o.tiles, { pane: "hist", opacity: st.opacity, maxZoom: 19, minNativeZoom: o.minzoom, maxNativeZoom: o.maxzoom,
       bounds: b ? [[b[1], b[0]], [b[3], b[2]]] : undefined, attribution: `${esc(m.title)} (${m.year}) · ${esc(o.provider || "online")}` });
@@ -811,8 +849,10 @@
         <div class="row" style="margin:6px 0 0">
           <select data-cmode style="width:auto">${["auto", "online", "offline"].map((k) => `<option value="${k}" ${st.mode === k ? "selected" : ""} ${k === "online" && !m.online || k === "offline" && !m.offline ? "disabled" : ""}>${{ auto: "Auto (online, else offline)", online: "Online tiles", offline: "Offline copy" }[k]}</option>`).join("")}</select>
           <button class="btn" data-czoom title="Zoom to map">⌖</button>
+          ${window.AR_GCPS && AR_GCPS[m.id] && m.original ? `<button class="btn" data-cedit>Edit points</button>` : ""}
         </div>
         <input type="range" min="0" max="1" step="0.05" value="${st.opacity}" data-cop style="width:100%;accent-color:var(--gold)">
+        ${gcpEdits[m.id] ? `<div class="meta" style="color:var(--gold)">Offline copy uses your edited points (saved in this browser, ${gcpEdits[m.id].points.length} points). Export them to make them permanent.</div>` : ""}
         <div class="meta">${m.offline ? `Offline: ${esc(m.offline.method)}, ~${m.offline.error_km} km typical error · ` : ""}${m.original ? `<a href="${esc(m.original)}" target="_blank">original scan</a> · ` : ""}${m.source ? `<a href="${esc(m.source)}" target="_blank" rel="noopener">source</a>` : ""}</div>
         ${m.notes ? `<div class="body">${esc(m.notes)}</div>` : ""}</li>`; }).join("") || `<li class="meta">No maps in data/maps/catalog.js.</li>`;
     $$("#catList li[data-id]").forEach((li) => {
@@ -821,10 +861,65 @@
       li.querySelector("[data-con]").addEventListener("change", (e) => { st.on = e.target.checked; save(); catRefresh(m); });
       li.querySelector("[data-cmode]").addEventListener("change", (e) => { st.mode = e.target.value; m._failed = false; save(); catRefresh(m); });
       li.querySelector("[data-cop]").addEventListener("input", (e) => { st.opacity = +e.target.value; save(); const l = catLayers.get(m.id); if (l) l.setOpacity(st.opacity); });
+      const eb = li.querySelector("[data-cedit]");
+      if (eb) eb.addEventListener("click", () => openEditor(m));
       li.querySelector("[data-czoom]").addEventListener("click", () => map.flyToBounds(m.offline ? m.offline.bounds : [[m.online.bounds[1], m.online.bounds[0]], [m.online.bounds[3], m.online.bounds[2]]], { duration: 0.8 }));
     });
   }
   $("#catWindow").addEventListener("change", () => CATALOG.forEach(catRefresh));
+
+  /* ---- Control-point editor ---- */
+  let gcpEdits = store.get("ar_gcps_edit", {});
+  let edDirty = false;
+  const editor = ARGcp.createEditor({
+    map, root: $("#gcpEd"), esc,
+    onChange: () => { edDirty = true; $("#geSave").classList.add("primary"); },
+    onClose: () => { const m = edMap; edMap = null; mode = null; if (m) catRefresh(m); },
+  });
+  let edMap = null;
+  function openEditor(m) {
+    if (editor.active) editor.close();
+    const old = catLayers.get(m.id);
+    if (old) { L_.histCat.removeLayer(old); catLayers.delete(m.id); }
+    edMap = m; mode = "gcpedit";
+    editor.open(m, gcpEdits[m.id] || AR_GCPS[m.id], cst(m).opacity);
+    edDirty = false; $("#geSave").classList.remove("primary");
+    const b = m.offline ? m.offline.bounds : null;
+    if (b) map.flyToBounds(b, { duration: 0.6 });
+    if (!isOn({ key: "hist", on: true })) { layerState.hist = true; applyLayers(); renderLayerList(); }
+  }
+  $("#geSave").addEventListener("click", () => {
+    if (!edMap) return;
+    gcpEdits[edMap.id] = editor.gcp; store.set("ar_gcps_edit", gcpEdits);
+    cst(edMap).on = true; cst(edMap).mode = "offline"; store.set("ar_catalog", catState);
+    edDirty = false; $("#geSave").classList.remove("primary");
+    renderCatalog();
+    $("#gcpEd .gs").textContent = "Saved in this browser. The offline copy now uses these points (mode set to Offline copy).";
+  });
+  $("#geExport").addEventListener("click", () => {
+    if (!edMap) return;
+    const g = Object.assign({}, editor.gcp, { edited: new Date().toISOString() });
+    download(`${edMap.id}.gcps.json`, JSON.stringify(g, null, 1), "application/json");
+  });
+  $("#gePoints").addEventListener("click", () => { if (edMap) download(`${edMap.id}.points`, ARGcp.toQgisPoints(editor.gcp), "text/plain"); });
+  $("#geImport").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; if (!f || !edMap) return;
+    const txt = await f.text();
+    try {
+      const g = /\.points$/i.test(f.name) ? ARGcp.fromQgisPoints(txt, editor.gcp) : JSON.parse(txt);
+      if (!g.points || !g.points.length) throw new Error("no points found");
+      editor.replace(Object.assign({}, editor.gcp, { points: g.points, mask: g.mask || editor.gcp.mask }));
+    } catch (e) { alert("Could not import: " + e.message); }
+    ev.target.value = "";
+  });
+  $("#geRevert").addEventListener("click", () => {
+    if (!edMap || !confirm("Discard your edits and go back to the repository version of the points?")) return;
+    delete gcpEdits[edMap.id]; store.set("ar_gcps_edit", gcpEdits);
+    editor.replace(AR_GCPS[edMap.id]); edDirty = false; renderCatalog();
+  });
+  $("#gcpEd .gclose").addEventListener("click", (e) => {
+    if (edDirty && !confirm("Close without saving your changes?")) { e.stopImmediatePropagation(); }
+  }, true);
   CATALOG.forEach((m) => { if (cst(m).on) catRefresh(m); });
   renderCatalog();
 
@@ -947,6 +1042,7 @@
   let mode = null;
   map.on("click", (e) => {
     const { lat, lng } = e.latlng;
+    if (editor.active) { editor.handleMapClick(e.latlng); return; }
     if (mode === "georef") { grMapClick(e.latlng); return; }
     if (mode === "dbdraw") { drawing.push([lat, lng]); areaLayer.setLatLngs(drawing); return; }
     if (mode === "log") { mode = null; document.body.classList.remove("picking"); $("#logAdd").textContent = "Add record"; addLog(lat, lng, "find"); return; }

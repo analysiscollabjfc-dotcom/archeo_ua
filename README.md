@@ -18,7 +18,7 @@ Works offline except for basemap tiles, online historical map layers and the OSM
 | Tab | What it does |
 |---|---|
 | **Periods** | 15 periods from the Lower Palaeolithic to 1945, each a toggle, all visible at once, plus a two-handle time-window slider and an "undated" switch |
-| **Layers** | Settlement / barrow / hillfort potential, landforms, DEM streams, shaded relief, landscape zones; online loaders for OSM archaeological sites (view) and Wikidata (all Ukraine) |
+| **Layers** | Settlement / barrow / hillfort potential (off by default; S/B/H buttons on the map; "show potential ≥" threshold), landforms, DEM streams, shaded relief, landscape zones; online loaders for OSM archaeological sites (view) and Wikidata (all Ukraine) |
 | **Sites** | Search and filter; **import CSV/GeoJSON** (`name, lat, lon, period, type, notes, depth`); export |
 | **Old maps** | Add online tile or WMS historical maps; **georeference your scans** in the browser (control points, affine, RMS shown); **swipe** comparison; **digitise** barrow symbols, vanished villages, mills and earthworks |
 | **Survey** | Rank local maxima of a potential surface in the current view, excluding known sites if you want; export GPX/GeoJSON/CSV |
@@ -54,6 +54,12 @@ DEM: Copernicus GLO-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space G
 - an **offline copy**: the original scan in `data/maps/` warped with a thin-plate spline by `tools/warp_map.py` from its control-point file `<id>.gcps.json`.
 
 The default **Auto** mode uses the online tiles and switches to the offline copy when they fail to load.
+
+**Editing control points:** click **Edit points** on a catalogue map.
+- Drag points on the scan or pins on the map, add pairs, or untick doubtful points. The warp preview and each point's error update live.
+- **Save** stores the points in the browser; the offline copy then uses them.
+- **Export .gcps.json** and replace `data/maps/<id>.gcps.json`, then rerun `tools/warp_map.py` to make the edit permanent.
+- QGIS `.points` files can be imported and exported.
 
 To add a map:
 
