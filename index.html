@@ -24,6 +24,7 @@
       <button class="tab" data-tab="sites">Sites</button>
       <button class="tab" data-tab="maps">Old maps</button>
       <button class="tab" data-tab="survey">Survey</button>
+      <button class="tab" data-tab="voids">Promising</button>
       <button class="tab" data-tab="dba">Assessment</button>
       <button class="tab" data-tab="inspect">Inspect</button>
       <button class="tab" data-tab="log">Field log</button>
@@ -147,6 +148,56 @@
       <ol id="svList" class="cards"></ol>
     </section>
 
+    <!-- PROMISING TERRAIN -->
+    <section class="pane" id="pane-voids">
+      <h2>Promising terrain (voids)</h2>
+      <p class="hint">Land as far as possible from settlements: the gaps midway between them score highest. Zoom to an area (zoom ≥ 9), load settlements, then compute.</p>
+      <div class="filters">
+        <label class="chk"><input type="checkbox" id="vOsm" checked> Modern settlements (OpenStreetMap, online)</label>
+        <label class="chk"><input type="checkbox" id="vSites"> Known archaeological sites (visible periods)</label>
+      </div>
+      <div class="row"><button class="btn" id="vLoad">Load settlements in view</button></div>
+      <p id="vPlaces" class="status"></p>
+      <label class="slider">Void scale <output id="vDOut">3.0 km</output>
+        <input type="range" id="vD" min="0.5" max="10" step="0.5" value="3"></label>
+      <label class="slider">Ignore land within <output id="vMinOut">1.0 km</output> of a settlement
+        <input type="range" id="vMin" min="0" max="4" step="0.25" value="1"></label>
+      <div class="filters">
+        <select id="vPot">
+          <option value="max">Weight by site potential (best of the three)</option>
+          <option value="1">Weight by settlement potential</option>
+          <option value="0">Weight by barrow potential</option>
+          <option value="2">Weight by hillfort potential</option>
+          <option value="none">Distance only</option>
+        </select>
+      </div>
+      <label class="slider">Show ≥ <output id="vShowOut">0.40</output>
+        <input type="range" id="vShow" min="0" max="0.95" step="0.05" value="0.4"></label>
+      <div class="row"><button class="btn primary" id="vRun">Compute promising terrain</button></div>
+      <p id="vStatus" class="status"></p>
+
+      <h3>Shape recognition in imagery</h3>
+      <p class="hint">Scans satellite imagery around the best voids for circles (barrows, ring ditches, house rings; 8–40 m radius) and rectangles (enclosures, foundations; 15–150 m). Detections raise the promise score around them. Heuristic: review each one.</p>
+      <label class="slider">Voids to scan <output id="vNOut">10</output>
+        <input type="range" id="vN" min="1" max="30" step="1" value="10"></label>
+      <label class="slider">Minimum detection score <output id="vScoreOut">0.60</output>
+        <input type="range" id="vScore" min="0.4" max="0.95" step="0.05" value="0.6"></label>
+      <div class="filters">
+        <input type="text" id="vImg" value="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" title="Imagery tile URL (must allow cross-origin reading)">
+      </div>
+      <div class="row">
+        <button class="btn primary" id="vScan">Scan top voids</button>
+        <button class="btn" id="vStop">Stop</button>
+        <button class="btn" id="vClearDet">Clear unreviewed</button>
+      </div>
+      <p id="vScanStatus" class="status"></p>
+      <h3>Ranked voids <span class="pill" id="vCount"></span></h3>
+      <ol id="vList" class="cards"></ol>
+      <h3>Detections <span class="pill" id="dCount"></span></h3>
+      <div class="filters"><select id="dFilter"><option value="open">Unreviewed + confirmed</option><option value="all">All</option><option value="confirmed">Confirmed only</option></select></div>
+      <ul id="dList" class="cards"></ul>
+    </section>
+
     <!-- DESK-BASED ASSESSMENT -->
     <section class="pane" id="pane-dba">
       <h2>Desk-based assessment</h2>
@@ -243,6 +294,8 @@
   <script src="js/rasters.js"></script>
   <script src="js/histmaps.js"></script>
   <script src="js/gcpeditor.js"></script>
+  <script src="js/voids.js"></script>
+  <script src="js/shapes.js"></script>
   <script src="js/guide.js"></script>
   <script src="js/app.js"></script>
 </body>

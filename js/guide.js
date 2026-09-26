@@ -60,6 +60,22 @@ window.AR_GUIDE = function () {
   <li><b>Digitise</b> barrow symbols, vanished villages, mills or earthworks. Barrow/earthwork symbols are stored undated (the map only proves they existed by then); buildings and villages take the map's period.</li>
 </ul>
 
+<h2>5b · Promising terrain (voids) and shape recognition</h2>
+<p><b>Voids.</b> For the current view the app computes the exact distance from every point to the nearest settlement (Felzenszwalb–Huttenlocher distance transform on a ~250 m grid). The score peaks midway between settlements:</p>
+<p><code>void = 1 − exp(−(d − d<sub>min</sub>) / D)</code>, 0 within d<sub>min</sub> of a settlement, × (0.25 + 0.75 × site potential) unless "distance only" is chosen.</p>
+<ul>
+  <li><b>Settlement sources:</b> modern settlements from OpenStreetMap (city, town, village, hamlet, suburb, isolated dwelling), loaded for the view plus a margin. Areas where settlements were never loaded stay blank, so missing data never reads as "empty land". Known archaeological sites can be added, which highlights unexplored gaps between known sites.</li>
+  <li>OSM settlements are points: the <b>ignore within</b> distance stands in for the village's built-up area.</li>
+</ul>
+<p><b>Shape recognition.</b> Around the best voids (or any point via Inspect → <i>Scan imagery here</i>) the app reads 3×3 satellite tiles at zoom 17 (~0.8 m/px, ~600 m square) and looks for:</p>
+<ul>
+  <li><b>Circles</b> 8–40 m radius: gradient-directed Hough voting; kept only when ≥ 50 % of the circumference has an edge whose gradient points along the radius, the refined radius is in range, and the shape is round. Barrows, ring ditches, Trypillia house rings, pits.</li>
+  <li><b>Rectangles</b> 15–150 m: Hough lines → parallel pairs → perpendicular pairs; all four sides need oriented edge support, and lines that continue far beyond the corners (field boundaries, roads) are penalised. Enclosures, foundations, earthworks.</li>
+  <li>Both brightness (soil marks) and excess-green (crop marks) are analysed. Shapes with saturated or near-white colour (roofs, pools, concrete) are flagged <i>looks modern</i> and halved.</li>
+</ul>
+<p><b>Amplification:</b> each unrejected detection adds a Gaussian bump (σ 0.5 km) to the score: × (1 + 0.8 × Σ score), confirmed detections count double, modern-looking ones 0.3. Boosted areas show in pink. Confirmed detections become sites (source "Detected in imagery").</p>
+<div class="callout">This is triage, not identification. Expect false positives (tree clumps, field corners, farm buildings, irrigation circles, bomb craters) and misses (features invisible in that image's season). Crop marks show best in dry summers; check historical imagery and the old maps before fieldwork. Tile imagery is used on demand for viewing and analysis in your browser; check the imagery provider's terms before large scans.</div>
+
 <h2>6 · Adding a 30 m study area</h2>
 <p>Add a line to <code>REGIONS</code> in <code>tools/dem_fetch.py</code> (west, south, east, north), then run <code>python3 tools/dem_fetch.py dem/ &lt;name&gt;_30m</code>, <code>python3 tools/terrain.py dem/ &lt;name&gt;_30m</code>, and add the two generated <code>data/*_&lt;name&gt;_30m.js</code> files to <code>index.html</code>. Study areas automatically replace the national grid inside their box.</p>
 

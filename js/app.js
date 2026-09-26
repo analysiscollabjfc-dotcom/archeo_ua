@@ -181,13 +181,13 @@
   /* ------------------------------------------------------------------ */
   /* Sites                                                               */
   /* ------------------------------------------------------------------ */
-  const SOURCES = { curated: "Curated (published)", imported: "Imported", osm: "OpenStreetMap", wikidata: "Wikidata", mapfeature: "Digitised from old maps" };
+  const SOURCES = { curated: "Curated (published)", imported: "Imported", osm: "OpenStreetMap", wikidata: "Wikidata", mapfeature: "Digitised from old maps", detected: "Detected in imagery (confirmed)" };
   const TYPE_R = { city: 8, hillfort: 7, fortress: 7, barrow: 6, settlement: 6 };
   let imported = store.get("ar_imported", []);
   let digitised = store.get("ar_digitised", []);
   let online = []; // OSM + Wikidata, session only
   const curated = window.AR_SITES.map((s) => Object.assign({ source: "curated", confidence: "documented" }, s));
-  const allSites = () => curated.concat(imported, digitised, online);
+  const allSites = () => curated.concat(imported, digitised, online, detectedSites());
 
   function siteVisible(s) {
     if (!s.periods || !s.periods.length) return pState.undated;
@@ -427,6 +427,8 @@
     { key: "relief", label: "Shaded relief", swatch: "linear-gradient(135deg,#fff,#555)", on: true },
     { key: "hist", label: "Historical maps", swatch: "#b08d57", on: true },
     { key: "survey", label: "Survey candidates", swatch: "#ffd54f", round: true, on: true },
+    { key: "voids", label: "Promising terrain (voids)", swatch: "rgb(186,104,200)", on: true },
+    { key: "shapes", label: "Detected circles & rectangles", swatch: "transparent", round: true, on: true },
     { key: "log", label: "Field log", swatch: "#29b6f6", on: true },
     { key: "studyAreas", label: "30 m study areas", swatch: "transparent", on: true },
     { key: "zones", label: "Landscape zones", swatch: "#9c8a3c", on: false },
@@ -540,10 +542,17 @@
     }
     html += `<h3>Nearest sites</h3><ul class="cards">${near.map(({ s, d }) => `<li data-lat="${s.lat}" data-lon="${s.lon}"><div class="title"><span>${esc(s.name)}</span><span class="meta">${fmt(d, 1)} km</span></div>
       <div class="meta">${(s.periods || []).map((id) => PBY[id].name).join(", ") || "undated"}</div></li>`).join("")}</ul>
-      <div class="row"><button class="btn primary" id="inAddObs">Record observation here</button></div>`;
+      <div class="row"><button class="btn primary" id="inAddObs">Record observation here</button>
+        <button class="btn" id="inScan" title="Look for circles and rectangles in satellite imagery around this point">Scan imagery here</button></div>
+      <div id="inScanOut" class="status"></div>`;
     $("#inspectOut").innerHTML = html;
     $$("#inspectOut li[data-lat]").forEach((li) => li.addEventListener("click", () => map.flyTo([+li.dataset.lat, +li.dataset.lon], Math.max(map.getZoom(), 13))));
     $("#inAddObs").addEventListener("click", () => addLog(lat, lon, "observation"));
+    $("#inScan").addEventListener("click", async () => {
+      $("#inScanOut").textContent = "Scanning imagery…";
+      const n = await scanAt(lat, lon);
+      $("#inScanOut").textContent = n < 0 ? scanError : `${n} shape(s) found. See Promising → Detections.`;
+    });
     if (inspectMarker) inspectMarker.remove();
     inspectMarker = L.circleMarker([lat, lon], { pane: "log", radius: 8, color: "#fff", weight: 2, fill: false, interactive: false }).addTo(map);
     showTab("inspect");
@@ -1053,6 +1062,252 @@
       store.set("ar_digitised", digitised); map.closePopup(pop); drawSites();
     }), 0);
   }
+
+
+  /* ------------------------------------------------------------------ */
+  /* Promising terrain (voids) + shape recognition                       */
+  /* ------------------------------------------------------------------ */
+  L_.voids = L.layerGroup();
+  L_.shapes = L.layerGroup();
+  var places = new Map();                       // OSM settlements: id -> [lat, lon, kind, id]
+  (store.get("ar_places", []) || []).forEach((p) => places.set(p[3], p));
+  var placeBoxes = store.get("ar_placeboxes", []); // areas where settlements were loaded [s,w,n,e]
+  var shapes = store.get("ar_shapes", []);      // detections
+  var thumbs = new Map();                       // id -> data URL (session only)
+  let vState = null, scanStop = false, scanError = "";
+  const saveShapes = () => store.set("ar_shapes", shapes);
+  function detectedSites() {
+    return (typeof shapes === "undefined" ? [] : shapes).filter((d) => d.status === "confirmed").map((d) => ({
+      id: d.id, source: "detected", lat: d.lat, lon: d.lon, periods: [], acc: 0.05,
+      type: d.type === "circle" ? "circular feature" : "rectilinear feature",
+      name: d.type === "circle" ? `Circular feature, ⌀ ${Math.round(d.r_m * 2)} m` : `Rectilinear feature, ${Math.round(d.a_m)} × ${Math.round(d.b_m)} m`,
+      notes: `Detected in satellite imagery (score ${fmt(d.score)}) and confirmed by you${d.note ? ": " + d.note : ""}.`,
+    }));
+  }
+  const bindOutV = (id, out, f) => { const el = $("#" + id); const u = () => { $("#" + out).textContent = f(+el.value); }; el.addEventListener("input", u); u(); };
+  bindOutV("vD", "vDOut", (v) => fmt(v, 1) + " km");
+  bindOutV("vMin", "vMinOut", (v) => fmt(v, 2).replace(/0$/, "") + " km");
+  bindOutV("vShow", "vShowOut", (v) => fmt(v));
+  bindOutV("vN", "vNOut", (v) => String(v));
+  bindOutV("vScore", "vScoreOut", (v) => fmt(v));
+  function placesStatus() {
+    const b = map.getBounds();
+    let n = 0; for (const p of places.values()) if (b.contains([p[0], p[1]])) n++;
+    $("#vPlaces").textContent = `${places.size} settlements loaded, ${n} in view.`;
+  }
+  $("#vLoad").addEventListener("click", async () => {
+    if (map.getZoom() < 9) { $("#vPlaces").textContent = "Zoom in to level 9 or closer first."; return; }
+    const b = map.getBounds().pad(0.35); // include settlements just outside the view
+    const box = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
+    const bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map((v) => fmt(v, 4)).join(",");
+    const q = `[out:json][timeout:90];node["place"~"^(city|town|village|hamlet|suburb|isolated_dwelling)$"](${bbox});out;`;
+    $("#vPlaces").textContent = "Loading settlements from OpenStreetMap…";
+    let data = null;
+    for (const url of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
+      try { const r = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q) }); if (r.ok) { data = await r.json(); break; } } catch (e) { /* next */ }
+    }
+    if (!data) { $("#vPlaces").textContent = "Could not reach OpenStreetMap (Overpass). Check the internet connection."; return; }
+    for (const el of data.elements || []) if (el.lat) places.set("n" + el.id, [+el.lat.toFixed(5), +el.lon.toFixed(5), (el.tags || {}).place || "", "n" + el.id]);
+    placeBoxes.push(box.map((v) => +v.toFixed(4)));
+    store.set("ar_placeboxes", placeBoxes.slice(-400));
+    const all = [...places.values()];
+    store.set("ar_places", all.length > 80000 ? all.slice(-80000) : all);
+    placesStatus();
+  });
+  map.on("moveend", () => { if ($("#pane-voids").classList.contains("active")) placesStatus(); });
+
+  function computeVoids() {
+    const b = map.getBounds(), bounds = { s: b.getSouth(), w: b.getWest(), n: b.getNorth(), e: b.getEast() };
+    const pad = 0.6, pts = [];
+    if ($("#vOsm").checked) for (const p of places.values()) {
+      if (p[0] > bounds.s - pad && p[0] < bounds.n + pad && p[1] > bounds.w - pad && p[1] < bounds.e + pad) pts.push([p[0], p[1]]);
+    }
+    const nOsm = pts.length;
+    if ($("#vSites").checked) allSites().filter(siteVisible).forEach((s) => pts.push([s.lat, s.lon]));
+    if (!pts.length) { $("#vStatus").textContent = $("#vOsm").checked ? "No settlements loaded for this area: click 'Load settlements in view' first." : "No settlement source selected."; return; }
+    const cols = Math.min(520, Math.max(160, Math.round(map.getSize().x / 2.5)));
+    const g = ARVoids.distanceGrid(bounds, pts, cols);
+    const N = g.cols * g.rows, pot = new Float32Array(N), water = new Uint8Array(N);
+    // Where no settlements were loaded, "far from settlements" is unknown: leave unscored.
+    // The loaded boxes include a margin, so shrink them to keep distances reliable at their edges.
+    const known = (lat, lon) => !$("#vOsm").checked || placeBoxes.some(([bs, bw, bn, be]) => {
+      const my = (bn - bs) * 0.12, mx = (be - bw) * 0.12;
+      return lat > bs + my && lat < bn - my && lon > bw + mx && lon < be - mx;
+    });
+    let unknown = 0;
+    const mode = $("#vPot").value;
+    for (let y = 0; y < g.rows; y++) {
+      const lat = g.latOfRow(y);
+      for (let x = 0; x < g.cols; x++) {
+        const lon = g.lonOfCol(x), sm = sampleAt(lat, lon), i = y * g.cols + x;
+        if (!known(lat, lon)) { water[i] = 1; unknown++; continue; }
+        if (!sm) { pot[i] = mode === "none" ? 1 : 0.5; continue; }
+        if (sm.landform === 0) water[i] = 1;
+        pot[i] = mode === "none" ? 1 : mode === "max" ? Math.max(sm.barrow, sm.settlement, sm.hillfort) : [sm.barrow, sm.settlement, sm.hillfort][+mode];
+      }
+    }
+    vState = { g, pot, water, bounds, nOsm, nSites: pts.length - nOsm, unknownPct: Math.round((100 * unknown) / N) };
+    renderVoids();
+    if (!isOn({ key: "voids", on: true })) { layerState.voids = true; store.set("ar_layers", layerState); applyLayers(); renderLayerList(); }
+  }
+  // Score grid including amplification by detections (confirmed count double, rejected not at all)
+  function voidScores() {
+    const { g, pot, water } = vState, D = +$("#vD").value, dMin = +$("#vMin").value;
+    const N = g.cols * g.rows, base = new Float32Array(N), amp = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      const d = g.dist[i];
+      base[i] = water[i] || d < dMin ? 0 : (1 - Math.exp(-(d - dMin) / D)) * (0.25 + 0.75 * pot[i]);
+    }
+    const sig = 0.5; // km
+    for (const s of shapes) {
+      if (s.status === "rejected") continue;
+      const w = s.score * (s.status === "confirmed" ? 2 : 1) * (s.modern ? 0.3 : 1);
+      const cx = ((s.lon - g.bounds.w) / (g.bounds.e - g.bounds.w)) * g.cols;
+      const y0 = Math.log(Math.tan(Math.PI / 4 + (g.bounds.n * Math.PI) / 360)), y1 = Math.log(Math.tan(Math.PI / 4 + (g.bounds.s * Math.PI) / 360));
+      const cy = ((y0 - Math.log(Math.tan(Math.PI / 4 + (s.lat * Math.PI) / 360))) / (y0 - y1)) * g.rows;
+      const rx = Math.ceil((3 * sig) / g.dx), ry = Math.ceil((3 * sig) / g.dy);
+      for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(g.rows - 1, cy + ry); y++)
+        for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(g.cols - 1, cx + rx); x++) {
+          const dd = ((x - cx) * g.dx) ** 2 + ((y - cy) * g.dy) ** 2;
+          amp[y * g.cols + x] += w * Math.exp(-dd / (2 * sig * sig));
+        }
+    }
+    const out = new Float32Array(N);
+    for (let i = 0; i < N; i++) out[i] = Math.min(1, base[i] * (1 + 0.8 * Math.min(2, amp[i])));
+    return { base, amp, out };
+  }
+  function renderVoids() {
+    if (!vState) return;
+    const { g } = vState, sc = voidScores(), show = +$("#vShow").value;
+    const cv = document.createElement("canvas"); cv.width = g.cols; cv.height = g.rows;
+    const ctx = cv.getContext("2d"), img = ctx.createImageData(g.cols, g.rows);
+    for (let i = 0; i < sc.out.length; i++) {
+      const v = sc.out[i];
+      if (v < show || v <= 0) continue;
+      const t = (v - show) / Math.max(0.05, 1 - show), boosted = sc.amp[i] > 0.15;
+      img.data[4 * i] = boosted ? 255 : 186; img.data[4 * i + 1] = boosted ? 64 : 104; img.data[4 * i + 2] = boosted ? 129 : 200;
+      img.data[4 * i + 3] = Math.round(70 + 170 * t);
+    }
+    ctx.putImageData(img, 0, 0);
+    L_.voids.clearLayers();
+    L_.voids.addLayer(L.imageOverlay(cv.toDataURL(), [[g.bounds.s, g.bounds.w], [g.bounds.n, g.bounds.e]], { pane: "pot", opacity: 0.85, interactive: false }));
+    L_.voids.addLayer(L.rectangle([[g.bounds.s, g.bounds.w], [g.bounds.n, g.bounds.e]], { pane: "pot", color: "#ba68c8", weight: 1, dashArray: "4 4", fill: false, interactive: false }));
+    const pk = ARVoids.peaks(sc.out, g.cols, g.rows, g.latOfRow, g.lonOfCol, Math.max(1.5, +$("#vD").value / 2), 30, Math.max(0.05, show));
+    vState.peaks = pk.map((p) => { const i = p.y * g.cols + p.x; return Object.assign(p, { base: sc.base[i], amp: sc.amp[i], dist: g.dist[i], pot: vState.pot[i] }); });
+    $("#vCount").textContent = pk.length;
+    $("#vStatus").textContent = `${vState.nOsm} settlements${vState.nSites ? " + " + vState.nSites + " archaeological sites" : ""} used · ${g.cols}×${g.rows} grid (${fmt(g.dx, 2)} km cells).` +
+      (vState.unknownPct ? ` ${vState.unknownPct}% of the view has no settlement data and is left blank: load settlements there too.` : "");
+    $("#vList").innerHTML = vState.peaks.map((p, k) => {
+      const nd = shapes.filter((s) => s.status !== "rejected" && distKm(p.lat, p.lon, s.lat, s.lon) < 1.5).length;
+      return `<li data-k="${k}"><div class="title"><span>Void ${k + 1}</span><span class="score">${fmt(p.v)}</span></div>
+        <div class="meta">${fmt(p.dist, 1)} km from nearest settlement · potential ${fmt(p.pot)}${p.amp > 0.15 ? ` · <b style="color:#ff4081">boosted by ${nd} shape(s)</b>` : ""}</div>
+        <div class="meta">${ll(p.lat, p.lon)}</div>
+        <div class="row" style="margin:4px 0 0"><button class="btn" data-vz>Zoom</button><button class="btn" data-vs>Scan here</button></div></li>`;
+    }).join("") || `<li class="meta">Nothing above the threshold. Lower "Show ≥" or the void scale.</li>`;
+    $$("#vList li[data-k]").forEach((li) => {
+      const p = vState.peaks[+li.dataset.k];
+      li.querySelector("[data-vz]").addEventListener("click", () => map.flyTo([p.lat, p.lon], 15));
+      li.querySelector("[data-vs]").addEventListener("click", async () => {
+        $("#vScanStatus").textContent = "Scanning imagery…";
+        const n = await scanAt(p.lat, p.lon);
+        $("#vScanStatus").textContent = n < 0 ? scanError : `${n} shape(s) found around void ${+li.dataset.k + 1}.`;
+      });
+    });
+  }
+  $("#vRun").addEventListener("click", computeVoids);
+  ["#vD", "#vMin", "#vShow"].forEach((s) => $(s).addEventListener("change", renderVoids));
+  $("#vPot").addEventListener("change", () => { if (vState) computeVoids(); });
+
+  // Scan imagery around a point (3x3 tiles at zoom 17, ~600 m square)
+  async function scanAt(lat, lon) {
+    let win;
+    try { win = await ARShapes.loadWindow($("#vImg").value.trim(), lat, lon, 17, 1); }
+    catch (e) { scanError = "Imagery could not be loaded or read (" + e.message + "). Check the internet connection, or use an imagery URL that allows cross-origin access."; return -1; }
+    let dets;
+    try { dets = ARShapes.detect(win, { minScore: +$("#vScore").value }); }
+    catch (e) { scanError = "Imagery could not be analysed (" + e.message + "). The imagery server must allow cross-origin reading."; return -1; }
+    let added = 0;
+    for (const d of dets) {
+      if (shapes.some((s) => s.type === d.type && distKm(s.lat, s.lon, d.lat, d.lon) < 0.015)) continue;
+      const id = "det_" + uid();
+      shapes.push({ id, type: d.type, lat: +d.lat.toFixed(6), lon: +d.lon.toFixed(6), r_m: d.r_m, a_m: d.a_m, b_m: d.b_m,
+        corners: d.corners ? d.corners.map((c) => [+c[0].toFixed(6), +c[1].toFixed(6)]) : null,
+        score: +d.score.toFixed(3), modern: d.modern, status: "new", found: new Date().toISOString().slice(0, 10) });
+      const th = ARShapes.thumbnail(win, d); if (th) thumbs.set(id, th);
+      added++;
+    }
+    saveShapes(); drawShapes(); renderVoids(); renderDetList();
+    if (!isOn({ key: "shapes", on: true })) { layerState.shapes = true; store.set("ar_layers", layerState); applyLayers(); renderLayerList(); }
+    return added;
+  }
+  $("#vScan").addEventListener("click", async () => {
+    if (!vState || !vState.peaks || !vState.peaks.length) { $("#vScanStatus").textContent = "Compute promising terrain first."; return; }
+    scanStop = false;
+    const list = vState.peaks.slice(0, +$("#vN").value);
+    let total = 0;
+    for (let k = 0; k < list.length && !scanStop; k++) {
+      $("#vScanStatus").textContent = `Scanning void ${k + 1} of ${list.length}…`;
+      const n = await scanAt(list[k].lat, list[k].lon);
+      if (n < 0) { $("#vScanStatus").textContent = scanError; return; }
+      total += n;
+    }
+    $("#vScanStatus").textContent = `${scanStop ? "Stopped" : "Done"}: ${total} new shape(s). Review them below; confirmed ones count double.`;
+  });
+  $("#vStop").addEventListener("click", () => { scanStop = true; });
+  $("#vClearDet").addEventListener("click", () => { shapes = shapes.filter((s) => s.status !== "new"); saveShapes(); drawShapes(); renderVoids(); renderDetList(); });
+
+  function shapeLabel(s) {
+    return s.type === "circle" ? `Circle ⌀ ${Math.round(s.r_m * 2)} m` : `Rectangle ${Math.round(s.a_m)} × ${Math.round(s.b_m)} m`;
+  }
+  function shapePopup(s) {
+    const th = thumbs.get(s.id);
+    return `<h4>${shapeLabel(s)}</h4><div class="big-score">${fmt(s.score)}</div>
+      ${s.modern ? `<span class="tag warn">colour suggests a modern object</span>` : ""}<span class="tag">${s.status === "new" ? "unreviewed" : s.status}</span>
+      ${th ? `<img class="detimg" src="${th}" alt="imagery">` : `<div class="meta">Thumbnail not kept between sessions: switch the basemap to Satellite and zoom in.</div>`}
+      <div class="meta">${ll(s.lat, s.lon)} · found ${s.found}</div>
+      <div class="row"><button class="btn primary" data-dconf="${s.id}">Confirm</button><button class="btn" data-drej="${s.id}">Reject</button><button class="btn" data-dz="${s.id}">Zoom</button></div>`;
+  }
+  function setStatus(id, st) {
+    const s = shapes.find((x) => x.id === id); if (!s) return;
+    s.status = s.status === st ? "new" : st;
+    saveShapes(); drawShapes(); renderVoids(); renderDetList(); drawSites(); map.closePopup();
+  }
+  function drawShapes() {
+    L_.shapes.clearLayers();
+    for (const s of shapes) {
+      if (s.status === "rejected") continue;
+      const col = s.status === "confirmed" ? "#43a047" : s.modern ? "#90a4ae" : "#ffd54f";
+      const opt = { pane: "survey", color: col, weight: 2.5, dashArray: s.status === "confirmed" ? null : "5 4", fillOpacity: 0.08 };
+      const lay = s.type === "circle" ? L.circle([s.lat, s.lon], Object.assign({ radius: s.r_m }, opt)) : L.polygon(s.corners, opt);
+      // a small marker so the feature can be found when zoomed out
+      const dot = L.circleMarker([s.lat, s.lon], { pane: "survey", radius: 4, color: "#111", weight: 1, fillColor: col, fillOpacity: 1, bubblingMouseEvents: false });
+      [lay, dot].forEach((l) => { l.bindPopup(() => shapePopup(s), { maxWidth: 260 }); L_.shapes.addLayer(l); });
+    }
+  }
+  map.on("popupopen", (e) => {
+    const el = e.popup.getElement();
+    el.querySelectorAll("[data-dconf]").forEach((b) => b.addEventListener("click", () => setStatus(b.dataset.dconf, "confirmed")));
+    el.querySelectorAll("[data-drej]").forEach((b) => b.addEventListener("click", () => setStatus(b.dataset.drej, "rejected")));
+    el.querySelectorAll("[data-dz]").forEach((b) => b.addEventListener("click", () => { const s = shapes.find((x) => x.id === b.dataset.dz); map.flyTo([s.lat, s.lon], 17); }));
+  });
+  function renderDetList() {
+    const f = $("#dFilter").value;
+    const list = shapes.filter((s) => f === "all" || (f === "confirmed" ? s.status === "confirmed" : s.status !== "rejected"))
+      .sort((a, b) => (b.status === "confirmed") - (a.status === "confirmed") || b.score - a.score);
+    $("#dCount").textContent = list.length;
+    $("#dList").innerHTML = list.slice(0, 200).map((s) => {
+      const th = thumbs.get(s.id);
+      return `<li class="det ${s.status}" data-id="${s.id}">${th ? `<img src="${th}" alt="">` : ""}<div class="info">
+        <div class="title"><span>${shapeLabel(s)}</span><span class="score">${fmt(s.score)}</span></div>
+        <div class="meta">${s.status === "new" ? "unreviewed" : s.status}${s.modern ? " · looks modern" : ""} · ${ll(s.lat, s.lon)}</div>
+        <div class="row"><button class="btn" data-dconf="${s.id}">${s.status === "confirmed" ? "Unconfirm" : "Confirm"}</button><button class="btn" data-drej="${s.id}">${s.status === "rejected" ? "Restore" : "Reject"}</button><button class="btn" data-dz="${s.id}">Zoom</button></div></div></li>`;
+    }).join("") || `<li class="meta">No detections yet.</li>`;
+    $$("#dList [data-dconf]").forEach((b) => b.addEventListener("click", () => setStatus(b.dataset.dconf, "confirmed")));
+    $$("#dList [data-drej]").forEach((b) => b.addEventListener("click", () => setStatus(b.dataset.drej, "rejected")));
+    $$("#dList [data-dz]").forEach((b) => b.addEventListener("click", () => { const s = shapes.find((x) => x.id === b.dataset.dz); map.flyTo([s.lat, s.lon], 17); }));
+  }
+  $("#dFilter").addEventListener("change", renderDetList);
+  drawShapes(); renderDetList(); placesStatus();
 
   /* ------------------------------------------------------------------ */
   /* Map click dispatcher                                                */

@@ -22,6 +22,7 @@ Works offline except for basemap tiles, online historical map layers and the OSM
 | **Sites** | Search and filter; **import CSV/GeoJSON** (`name, lat, lon, period, type, notes, depth`); export |
 | **Old maps** | Add online tile or WMS historical maps; **georeference your scans** in the browser (control points, affine, RMS shown); **swipe** comparison; **digitise** barrow symbols, vanished villages, mills and earthworks |
 | **Survey** | Rank local maxima of a potential surface in the current view, excluding known sites if you want; export GPX/GeoJSON/CSV |
+| **Promising** | Voids between settlements (OSM villages and/or known sites) weighted by site potential; satellite-imagery scan for circles and rectangles (crop/soil marks, barrows, enclosures) that amplifies the score; review with Confirm / Reject; confirmed features become sites |
 | **Assessment** | Draw a project polygon: sites within a buffer, share of high potential, landform composition, depth table by landform and period; printable report |
 | **Inspect** | Click anywhere: landform, elevation, height above stream, slope, the three potentials, **expected depth per period**, nearest sites |
 | **Field log** | Finds and **depth observations**. Observations calibrate the depth model within ~20 km |
